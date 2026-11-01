@@ -1,0 +1,24 @@
+{
+  "name": "eact",
+  "private": true,
+  "description": "EACT — gestion électronique des actes administratifs (Ministère de l'Enseignement Supérieur)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "docker compose --profile dev up -d --build",
+    "down": "docker compose --profile dev --profile obs down",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:migrate": "npm run prisma:migrate -w @eact/api",
+    "db:seed": "npm run prisma:seed -w @eact/api"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

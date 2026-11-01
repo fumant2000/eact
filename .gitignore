@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.next/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+infra/nginx/certs/
+.DS_Store

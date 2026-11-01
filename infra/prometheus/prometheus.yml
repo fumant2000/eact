@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: eact-api
+    metrics_path: /v1/metrics
+    dns_sd_configs:              # découvre toutes les instances api (redondance active)
+      - names: [api]
+        type: A
+        port: 3000

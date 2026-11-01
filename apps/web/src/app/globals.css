@@ -1,0 +1,94 @@
+/* Charte graphique EACT — docs/design-system.md (ADR 0007).
+   Contrastes vérifiés WCAG 2.1 AA en clair et en sombre. */
+@import "tailwindcss";
+
+/* Thème sombre piloté par la classe .dark (préférence utilisateur), sinon par le système. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Primaire — Bleu institutionnel (marque #2D3C8F = 700) */
+  --color-primary-50: #eef1fa;
+  --color-primary-100: #d9dff3;
+  --color-primary-200: #b6c1e8;
+  --color-primary-300: #8c9bd8;
+  --color-primary-400: #6274c4;
+  --color-primary-500: #4357ae;
+  --color-primary-600: #354799;
+  --color-primary-700: #2d3c8f;
+  --color-primary-800: #24306f;
+  --color-primary-900: #1c2553;
+  --color-primary-950: #121836;
+
+  /* Accent — Or « sceau » : signature, cachet, vérification uniquement */
+  --color-seal-400: #d9a441;
+  --color-seal-700: #8a6116;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-card: 8px;
+  --radius-control: 6px;
+}
+
+/* Jetons sémantiques : changent entre clair et sombre */
+:root {
+  --background: #f7f8fb;
+  --surface: #ffffff;
+  --border: #e3e6ee;
+  --foreground: #1a2033;
+  --muted: #5b6478;
+  --primary: #2d3c8f;
+  --primary-foreground: #ffffff;
+  --success: #0f7a55;
+  --warning: #b45309;
+  --danger: #c0262d;
+  --violet: #6d3fc0;
+  --seal: #d9a441;
+  --seal-foreground: #1a2033;
+}
+
+.dark {
+  --background: #0f1424;
+  --surface: #171d33;
+  --border: #2a3250;
+  --foreground: #e6e9f2;
+  --muted: #9aa3b8;
+  --primary: #8c9bd8;
+  --primary-foreground: #0f1424;
+  --success: #4cc38a;
+  --warning: #f0a84a;
+  --danger: #f2777c;
+  --violet: #b79cf0;
+  --seal: #e2b95a;
+  --seal-foreground: #0f1424;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-violet: var(--violet);
+  --color-seal: var(--seal);
+  --color-seal-foreground: var(--seal-foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+/* Références administratives : chiffres alignés, non ambigus */
+.reference {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

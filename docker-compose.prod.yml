@@ -1,0 +1,71 @@
+# Production / préproduction (CDC §15, §16.6) :
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Pas d'override dev ici : aucun port publié hormis nginx (443).
+services:
+  nginx:
+    ports: !override
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/certs:/etc/nginx/certs:ro
+
+  web:
+    environment:
+      NODE_ENV: production
+
+  # Redondance active : 2 instances derrière nginx (TF-15).
+  api:
+    deploy:
+      replicas: 2
+    environment:
+      NODE_ENV: production
+
+  worker:
+    deploy:
+      replicas: 2         # les jobs répétés BullMQ ne s'exécutent qu'une fois (verrou Redis)
+
+  # Redondance passive : réplica alimenté par le WAL (ENF-04).
+  postgres:
+    command: >
+      postgres -c wal_level=replica -c max_wal_senders=5 -c archive_mode=on
+               -c archive_command='test ! -f /wal-archive/%f && cp %p /wal-archive/%f'
+    volumes:
+      - wal-archive:/wal-archive
+
+  postgres-replica:
+    image: postgres:16-alpine
+    environment:
+      PGUSER: ${POSTGRES_REPLICATION_USER}
+      PGPASSWORD: ${POSTGRES_REPLICATION_PASSWORD}
+    entrypoint: ["/bin/sh", "/replica-entrypoint.sh"]
+    volumes:
+      - pg-replica-data:/var/lib/postgresql/data
+      - ./infra/postgres/replica-entrypoint.sh:/replica-entrypoint.sh:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+    restart: unless-stopped
+
+  # Sauvegarde quotidienne (3-2-1 : copie locale ici, copie NAS hors site par rsync).
+  backup:
+    image: postgres:16-alpine
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    volumes:
+      - ./infra/backup/backup.sh:/backup.sh:ro
+      - backups:/backups
+      - wal-archive:/wal-archive:ro
+    networks: [data]
+    restart: unless-stopped
+
+  mailpit: !reset {}
+
+volumes:
+  pg-replica-data: {}
+  wal-archive: {}
+  backups: {}

@@ -1,0 +1,427 @@
+// Modèle physique EACT (CDC §17, figure 11).
+// Toute évolution passe par une migration versionnée : `npm run db:migrate`.
+// Compléments SQL hors Prisma (trigger audit, tsvector) : voir prisma/sql/.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────── Énumérations ─────────────
+
+enum StatutActe {
+  BROUILLON
+  EN_CIRCUIT
+  A_CORRIGER
+  REJETE
+  PRET_A_SIGNER
+  TRANSMIS // projet de décret transmis à l'autorité signataire externe
+  SIGNE
+  EXECUTOIRE
+  ARCHIVE
+  RETIRE
+}
+
+enum Niveau {
+  PUBLIC
+  INTERNE
+  CONFIDENTIEL
+}
+
+enum DecisionVisa {
+  FAVORABLE
+  CORRECTION
+  REJET
+}
+
+enum Role {
+  AGENT_COURRIER
+  REDACTEUR
+  VISEUR
+  JURISTE
+  TRADUCTEUR
+  SECRETAIRE_GENERAL
+  AUTORITE_SIGNATAIRE
+  ARCHIVISTE
+  ADMINISTRATEUR
+  AUDITEUR
+}
+
+/// Mode de publicité par défaut d'un type (annexe B) ; détermine quand l'acte devient exécutoire (RG-13).
+enum ModePublicite {
+  JOURNAL_OFFICIEL // DEC, après signature par l'autorité compétente
+  PUBLICATION_OU_NOTIFICATION // AM : selon la portée de l'acte
+  NOTIFICATION // D
+  DIFFUSION // CIR, NS
+  SITE_ET_PRESSE // C
+  REMISE // ATT
+}
+
+enum Portee {
+  REGLEMENTAIRE // exécutoire après publication
+  INDIVIDUELLE // exécutoire après notification
+}
+
+enum MotifTransmission {
+  PUBLICATION_JO // acte réglementaire à publier au Journal officiel
+  SIGNATURE_DECRET // projet de décret vers la Présidence ou les services du Premier Ministre
+}
+
+enum Langue {
+  FR
+  EN
+}
+
+enum TypeDelegation {
+  SIGNATURE
+  INTERIM
+}
+
+enum StatutAnalyse {
+  EN_ATTENTE
+  SAINE
+  INFECTEE
+  REJETEE
+}
+
+// ───────────── M02 — Organisation, utilisateurs, délégations ─────────────
+
+model Structure {
+  id        String      @id @default(uuid()) @db.Uuid
+  code      String      @unique // SG, DAG, SDACL… (décret n° 2012/433)
+  libelle   String
+  parentId  String?     @map("parent_id") @db.Uuid
+  parent    Structure?  @relation("Organigramme", fields: [parentId], references: [id])
+  enfants   Structure[] @relation("Organigramme")
+  agents    Utilisateur[]
+  actes     Acte[]
+  circuits  CircuitValidation[]
+  compteurs CompteurNumerotation[]
+
+  @@map("structure")
+}
+
+model Utilisateur {
+  id                String    @id @default(uuid()) @db.Uuid
+  matricule         String    @unique
+  email             String    @unique
+  nom               String
+  prenom            String
+  motDePasseHash    String    @map("mot_de_passe_hash") // Argon2id (ENF-07)
+  totpSecretChiffre String?   @map("totp_secret_chiffre")
+  langue            Langue    @default(FR)
+  actif             Boolean   @default(true) // BF-07 : jamais supprimé
+  echecsConnexion   Int       @default(0) @map("echecs_connexion")
+  verrouilleJusqua  DateTime? @map("verrouille_jusqua") // BF-03
+  structureId       String    @map("structure_id") @db.Uuid
+  structure         Structure @relation(fields: [structureId], references: [id])
+  creeLe            DateTime  @default(now()) @map("cree_le")
+
+  roles               UtilisateurRole[]
+  actesRediges        Acte[]       @relation("Redacteur")
+  actesSignes         Acte[]       @relation("Signataire")
+  visas               Visa[]
+  delegationsDonnees  Delegation[] @relation("Delegant")
+  delegationsRecues   Delegation[] @relation("Delegataire")
+
+  @@map("utilisateur")
+}
+
+model UtilisateurRole {
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  role          Role
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+
+  @@id([utilisateurId, role])
+  @@map("utilisateur_role")
+}
+
+model Delegation {
+  id            String         @id @default(uuid()) @db.Uuid
+  type          TypeDelegation
+  delegantId    String         @map("delegant_id") @db.Uuid
+  delegataireId String         @map("delegataire_id") @db.Uuid
+  debut         DateTime
+  fin           DateTime // RG-17 : expiration automatique
+  mention       String // « Pour le Ministre et par délégation »
+  actif         Boolean        @default(true)
+  delegant      Utilisateur    @relation("Delegant", fields: [delegantId], references: [id])
+  delegataire   Utilisateur    @relation("Delegataire", fields: [delegataireId], references: [id])
+  actesSignes   Acte[]
+
+  @@index([delegataireId, debut, fin])
+  @@map("delegation")
+}
+
+// ───────────── M04 / M15 — Types, modèles, circuits ─────────────
+
+model TypeActe {
+  id                       String  @id @default(uuid()) @db.Uuid
+  code                     String        @unique // DEC, AM, D, CIR, NS, C, ATT (annexe B)
+  libelle                  String
+  modePublicite            ModePublicite @map("mode_publicite")
+  signeHorsMinistere       Boolean       @default(false) @map("signe_hors_ministere") // DEC
+  dureeConservationAnnees  Int?    @map("duree_conservation_annees") // null = définitive
+  champsObligatoires       Json    @default("[]") @map("champs_obligatoires") // RG-03
+  actif                    Boolean @default(true)
+
+  modeles   ModeleActe[]
+  circuits  CircuitValidation[]
+  actes     Acte[]
+  compteurs CompteurNumerotation[]
+
+  @@map("type_acte")
+}
+
+/// Gabarit versionné dans GitHub, servi depuis ce cache (RG-23).
+model ModeleActe {
+  id           String   @id @default(uuid()) @db.Uuid
+  typeActeId   String   @map("type_acte_id") @db.Uuid
+  langue       Langue
+  libelle      String
+  cheminGithub String   @map("chemin_github")
+  commitSha    String   @map("commit_sha")
+  contenuCache String   @map("contenu_cache") @db.Text
+  misAJourLe   DateTime @updatedAt @map("mis_a_jour_le")
+  typeActe     TypeActe @relation(fields: [typeActeId], references: [id])
+  actes        Acte[]
+
+  @@unique([typeActeId, langue, cheminGithub])
+  @@map("modele_acte")
+}
+
+model CircuitValidation {
+  id          String         @id @default(uuid()) @db.Uuid
+  typeActeId  String         @map("type_acte_id") @db.Uuid
+  structureId String         @map("structure_id") @db.Uuid
+  actif       Boolean        @default(true)
+  typeActe    TypeActe       @relation(fields: [typeActeId], references: [id])
+  structure   Structure      @relation(fields: [structureId], references: [id])
+  etapes      EtapeCircuit[]
+
+  @@unique([typeActeId, structureId])
+  @@map("circuit_validation")
+}
+
+model EtapeCircuit {
+  id           String            @id @default(uuid()) @db.Uuid
+  circuitId    String            @map("circuit_id") @db.Uuid
+  ordre        Int
+  libelle      String
+  roleRequis   Role              @map("role_requis")
+  delaiHeures  Int               @default(48) @map("delai_heures") // BF-27
+  circuit      CircuitValidation @relation(fields: [circuitId], references: [id])
+  visas        Visa[]            @relation("EtapeVisee")
+  actesEnCours Acte[]
+
+  @@unique([circuitId, ordre])
+  @@map("etape_circuit")
+}
+
+// ───────────── Acte (entité centrale) ─────────────
+
+model Acte {
+  id                String     @id @default(uuid()) @db.Uuid // RG-01
+  typeActeId        String     @map("type_acte_id") @db.Uuid
+  structureId       String     @map("structure_id") @db.Uuid // RG-02
+  redacteurId       String     @map("redacteur_id") @db.Uuid
+  modeleId          String?    @map("modele_id") @db.Uuid
+  objet             String
+  contenu           String     @db.Text
+  langue            Langue     @default(FR)
+  traductionRequise Boolean    @default(false) @map("traduction_requise") // RG-25
+  confidentialite   Niveau     @default(INTERNE)
+  portee            Portee     @default(INDIVIDUELLE) // RG-13
+  statut            StatutActe @default(BROUILLON)
+  etapeCouranteId   String?    @map("etape_courante_id") @db.Uuid
+  tourCircuit       Int        @default(1) @map("tour_circuit") // incrémenté à chaque resoumission
+  etapeEntreeLe     DateTime?  @map("etape_entree_le") // calcul du délai (BF-27)
+  version           Int        @default(1) // verrou optimiste (§14.2)
+
+  // Renseignés à la signature uniquement (RG-08)
+  reference          String?   @unique
+  annee              Int?
+  sequence           Int?
+  signataireId       String?   @map("signataire_id") @db.Uuid
+  delegationId       String?   @map("delegation_id") @db.Uuid
+  signeLe            DateTime? @map("signe_le")
+  empreinteSha256    String?   @map("empreinte_sha256")
+  codeVerification   String?   @unique @map("code_verification") // ex. K7Q2-9M (QR)
+  cheminPdf          String?   @map("chemin_pdf")
+  referenceExterne   String?   @map("reference_externe") // n° du décret signé par l'autorité externe (BF-39)
+
+  acteInitialId String?  @map("acte_initial_id") @db.Uuid // acte rectificatif (RG-10)
+  creeLe        DateTime @default(now()) @map("cree_le")
+  misAJourLe    DateTime @updatedAt @map("mis_a_jour_le")
+
+  typeActe      TypeActe      @relation(fields: [typeActeId], references: [id])
+  structure     Structure     @relation(fields: [structureId], references: [id])
+  redacteur     Utilisateur   @relation("Redacteur", fields: [redacteurId], references: [id])
+  signataire    Utilisateur?  @relation("Signataire", fields: [signataireId], references: [id])
+  delegation    Delegation?   @relation(fields: [delegationId], references: [id])
+  modele        ModeleActe?   @relation(fields: [modeleId], references: [id])
+  etapeCourante EtapeCircuit? @relation(fields: [etapeCouranteId], references: [id])
+  acteInitial   Acte?         @relation("Rectificatif", fields: [acteInitialId], references: [id])
+  rectificatifs Acte[]        @relation("Rectificatif")
+  versions      VersionActe[]
+  pieces        Piece[]
+  visas         Visa[]
+  destinataires Destinataire[]
+  transmissions TransmissionExterne[]
+
+  @@unique([typeActeId, structureId, annee, sequence]) // RG-08 : pas de doublon
+  @@index([statut, etapeCouranteId])
+  @@map("acte")
+}
+
+model VersionActe {
+  id       String   @id @default(uuid()) @db.Uuid
+  acteId   String   @map("acte_id") @db.Uuid
+  numero   Int
+  objet    String
+  contenu  String   @db.Text
+  auteurId String   @map("auteur_id") @db.Uuid
+  creeLe   DateTime @default(now()) @map("cree_le")
+  acte     Acte     @relation(fields: [acteId], references: [id])
+
+  @@unique([acteId, numero]) // BF-20
+  @@map("version_acte")
+}
+
+/// Pièce jointe — passe par le pipeline tubes et filtres (§13.1).
+model Piece {
+  id              String        @id @default(uuid()) @db.Uuid
+  acteId          String        @map("acte_id") @db.Uuid
+  nomFichier      String        @map("nom_fichier")
+  typeMime        String        @map("type_mime")
+  tailleOctets    Int           @map("taille_octets") // ≤ 20 Mo (BF-18)
+  cheminObjet     String        @map("chemin_objet")
+  empreinteSha256 String?       @map("empreinte_sha256")
+  statutAnalyse   StatutAnalyse @default(EN_ATTENTE) @map("statut_analyse") // RG-24
+  creeLe          DateTime      @default(now()) @map("cree_le")
+  acte            Acte          @relation(fields: [acteId], references: [id])
+
+  @@map("piece")
+}
+
+// ───────────── M05 — Visas ─────────────
+
+model Visa {
+  id           String       @id @default(uuid()) @db.Uuid
+  acteId       String       @map("acte_id") @db.Uuid
+  etapeId      String       @map("etape_id") @db.Uuid
+  viseurId     String       @map("viseur_id") @db.Uuid
+  tourCircuit  Int          @map("tour_circuit")
+  decision     DecisionVisa
+  observation  String?      // obligatoire si CORRECTION ou REJET (RG-05, RG-06)
+  etapeRetour  Int?         @map("etape_retour") // ordre de l'étape de retour (RG-06)
+  creeLe       DateTime     @default(now()) @map("cree_le")
+  acte         Acte         @relation(fields: [acteId], references: [id])
+  etape        EtapeCircuit @relation("EtapeVisee", fields: [etapeId], references: [id])
+  viseur       Utilisateur  @relation(fields: [viseurId], references: [id])
+
+  // RG-18 (une fois par étape), précisée par tour : après correction, l'acte repasse.
+  @@unique([acteId, etapeId, viseurId, tourCircuit])
+  @@map("visa")
+}
+
+// ───────────── M06 — Numérotation & idempotence ─────────────
+
+/// Séquenceur centralisé (ADR 0003) : ligne verrouillée par SELECT … FOR UPDATE.
+model CompteurNumerotation {
+  typeActeId    String    @map("type_acte_id") @db.Uuid
+  structureId   String    @map("structure_id") @db.Uuid
+  annee         Int
+  dernierNumero Int       @default(0) @map("dernier_numero")
+  typeActe      TypeActe  @relation(fields: [typeActeId], references: [id])
+  structure     Structure @relation(fields: [structureId], references: [id])
+
+  @@id([typeActeId, structureId, annee])
+  @@map("compteur_numerotation")
+}
+
+/// Sémantique « exactement une fois » (§16.3).
+model CleIdempotence {
+  cle           String   @id
+  utilisateurId String   @map("utilisateur_id") @db.Uuid
+  route         String
+  statutHttp    Int      @map("statut_http")
+  reponse       Json
+  creeLe        DateTime @default(now()) @map("cree_le")
+
+  @@map("cle_idempotence")
+}
+
+// ───────────── M07 — Diffusion et publication (P2) ─────────────
+
+model Destinataire {
+  id         String    @id @default(uuid()) @db.Uuid
+  acteId     String    @map("acte_id") @db.Uuid
+  libelle    String
+  email      String?
+  interne    Boolean   @default(true)
+  notifieLe  DateTime? @map("notifie_le") // BF-35
+  acte       Acte      @relation(fields: [acteId], references: [id])
+
+  @@map("destinataire")
+}
+
+/// BF-37 : transmission pour publication au Journal officiel ou d'un projet de décret.
+model TransmissionExterne {
+  id                String            @id @default(uuid()) @db.Uuid
+  acteId            String            @map("acte_id") @db.Uuid
+  motif             MotifTransmission
+  destinataire      String // Présidence de la République, services du Premier Ministre…
+  transmisLe        DateTime          @map("transmis_le")
+  bordereau         String
+  accuseReceptionLe DateTime?         @map("accuse_reception_le")
+  acte              Acte              @relation(fields: [acteId], references: [id])
+
+  @@map("transmission_externe")
+}
+
+// ───────────── M10 — Journal d'audit chaîné ─────────────
+
+/// Ajout seul : trigger anti UPDATE/DELETE dans prisma/sql/audit.sql (ADR 0004).
+model EvenementAudit {
+  id             BigInt   @id @default(autoincrement())
+  horodatage     DateTime @default(now())
+  acteurId       String?  @map("acteur_id") @db.Uuid
+  action         String // ex. acte.signe
+  ressourceType  String   @map("ressource_type")
+  ressourceId    String?  @map("ressource_id")
+  details        Json     @default("{}")
+  hashPrecedent  String   @map("hash_precedent")
+  hash           String   @unique
+
+  @@index([ressourceType, ressourceId])
+  @@map("evenement_audit")
+}
+
+// ───────────── M14 — GitHub ─────────────
+
+model RapportAnomalie {
+  id            String   @id @default(uuid()) @db.Uuid
+  module        String
+  versionApp    String   @map("version_app")
+  description   String   @db.Text // déjà anonymisée (RG-22)
+  statut        String   @default("TRANSMIS")
+  issueNumero   Int?     @unique @map("issue_numero") // empêche une double création
+  creeLe        DateTime @default(now()) @map("cree_le")
+
+  @@map("rapport_anomalie")
+}
+
+// ───────────── M15 — Paramètres chiffrés (BF-66) ─────────────
+
+model Parametre {
+  cle            String   @id
+  valeurChiffree String   @map("valeur_chiffree")
+  misAJourLe     DateTime @updatedAt @map("mis_a_jour_le")
+
+  @@map("parametre")
+}
