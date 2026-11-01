@@ -42,7 +42,7 @@ flowchart LR
     PG[(postgres<br/>primaire)]
     PGR[(postgres<br/>réplica)]
     REDIS[(redis)]
-    S3[(minio<br/>S3)]
+    S3[(s3 · RustFS<br/>compatible S3)]
   end
   subgraph OBS["Supervision"]
     PROM[prometheus] --> GRAF[grafana]
@@ -67,9 +67,10 @@ flowchart LR
 | `web` | build `apps/web` | app | Frontend Next.js (SSR pages publiques) | défaut |
 | `api` | build `apps/api` | app, data | API REST `/v1`, WebSocket, Swagger | défaut |
 | `worker` | build `apps/api` (cmd worker) | app, data, egress | Files BullMQ : PDF/A, antivirus, GitHub, notifs, relances | défaut |
+| `migrate` | build `apps/api` | data | `prisma migrate deploy` avant l'API, puis s'arrête | défaut |
 | `postgres` | postgres:16-alpine | data | Référentiel | défaut |
 | `redis` | redis:7-alpine | data | Files, cache, adaptateur Socket.IO, verrous de tâches | défaut |
-| `minio` + `minio-init` | minio/minio | data | Stockage objet PDF/A et pièces (chiffré) | défaut |
+| `s3` + `s3-init` | rustfs/rustfs, amazon/aws-cli | data | Stockage objet PDF/A et pièces, buckets créés au démarrage (ADR 0005) | défaut |
 | `gotenberg` | gotenberg/gotenberg:8 | app | Conversion PDF/A-2b | défaut |
 | `clamav` | clamav/clamav:1.4 | app | Antivirus (RG-24) | défaut |
 | `mailpit` | axllent/mailpit | app | Faux SMTP de dev (boîte web) | `dev` |

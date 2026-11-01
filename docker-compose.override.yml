@@ -1,13 +1,25 @@
 # Chargé automatiquement en dev par `docker compose up`.
 # Publie les ports des outils pour le poste du développeur (jamais en prod).
+# Ports hôte décalés par défaut (5433, 6380) pour cohabiter avec d'autres projets ; modifiables dans .env.
+#
+# Le réseau `data` est internal (ADR 0006) : Docker n'y publie aucun port. En dev seulement,
+# postgres, redis et s3 rejoignent aussi `devhost` pour être joignables depuis le poste.
 services:
   postgres:
-    ports: ["127.0.0.1:5432:5432"]
+    ports: ["127.0.0.1:${PG_HOST_PORT:-5433}:5432"]
+    networks: [data, devhost]
   redis:
-    ports: ["127.0.0.1:6379:6379"]
-  minio:
-    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]   # 9001 = console
+    ports: ["127.0.0.1:${REDIS_HOST_PORT:-6380}:6379"]
+    networks: [data, devhost]
+  s3:
+    ports:
+      - "127.0.0.1:${S3_HOST_PORT:-9000}:9000"
+      - "127.0.0.1:${S3_CONSOLE_HOST_PORT:-9001}:9001"      # console RustFS
+    networks: [data, devhost]
   mailpit:
-    ports: ["127.0.0.1:8025:8025"]                           # boîte mail web
+    ports: ["127.0.0.1:${MAILPIT_HOST_PORT:-8025}:8025"]    # boîte mail web
   api:
-    ports: ["127.0.0.1:3000:3000"]                           # Swagger : /docs
+    ports: ["127.0.0.1:${API_HOST_PORT:-3000}:3000"]        # Swagger : /docs
+
+networks:
+  devhost: {}

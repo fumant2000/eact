@@ -13,9 +13,9 @@ x-app-env: &app-env
   NODE_ENV: ${NODE_ENV:-development}
   DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
   REDIS_URL: redis://redis:6379
-  S3_ENDPOINT: http://minio:9000
-  S3_ACCESS_KEY: ${MINIO_ROOT_USER}
-  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+  S3_ENDPOINT: http://s3:9000
+  S3_ACCESS_KEY: ${S3_ROOT_USER}
+  S3_SECRET_KEY: ${S3_ROOT_PASSWORD}
   S3_BUCKET_ACTES: ${S3_BUCKET_ACTES:-actes}
   S3_BUCKET_PIECES: ${S3_BUCKET_PIECES:-pieces}
   GOTENBERG_URL: http://gotenberg:3000
@@ -60,17 +60,31 @@ services:
     networks: [app]
     restart: unless-stopped
 
+  # Applique les migrations Prisma puis s'arrête ; l'API ne démarre qu'après.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: eact/api:local
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+    restart: "no"
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    image: eact/api:local
     command: ["node", "dist/main.js"]
     environment: *app-env
     secrets: [github_app_key]
     depends_on:
-      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
-      minio-init: { condition: service_completed_successfully }
+      s3-init: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/v1/health"]
       interval: 10s
@@ -86,11 +100,12 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    image: eact/api:local
     command: ["node", "dist/worker.js"]
     environment: *app-env
     secrets: [github_app_key]
     depends_on:
-      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       gotenberg: { condition: service_started }
       clamav: { condition: service_healthy }
@@ -148,39 +163,42 @@ services:
     networks: [data]
     restart: unless-stopped
 
-  minio:
-    # Tag à figer avant la prod (voir ADR 0005).
-    image: minio/minio:latest
-    command: ["server", "/data", "--console-address", ":9001"]
+  # Stockage objet compatible S3 (ADR 0005). RustFS (Apache-2.0) remplace MinIO, dont les images
+  # officielles ne sont plus publiées. Le métier ne voit que IStockage : changer de serveur S3 = changer ce bloc.
+  s3:
+    image: rustfs/rustfs:1.0.4
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      RUSTFS_ACCESS_KEY: ${S3_ROOT_USER}
+      RUSTFS_SECRET_KEY: ${S3_ROOT_PASSWORD}
+      RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
-      - minio-data:/data
+      - s3-data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://localhost:9000/"]
       interval: 5s
       timeout: 3s
       retries: 20
     networks: [data]
     restart: unless-stopped
 
-  # Crée les buckets au premier démarrage puis s'arrête.
-  minio-init:
-    image: minio/mc:latest
+  # Crée les buckets au premier démarrage puis s'arrête. Client S3 générique : indépendant du serveur.
+  s3-init:
+    image: amazon/aws-cli:2.39.3
     depends_on:
-      minio: { condition: service_healthy }
+      s3: { condition: service_healthy }
     entrypoint: >
       /bin/sh -c "
-      mc alias set eact http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
-      mc mb --ignore-existing eact/$${S3_BUCKET_ACTES} &&
-      mc mb --ignore-existing eact/$${S3_BUCKET_PIECES} &&
-      mc mb --ignore-existing eact/gabarits-cache &&
-      mc version enable eact/$${S3_BUCKET_ACTES}
+      set -e;
+      for b in $${S3_BUCKET_ACTES} $${S3_BUCKET_PIECES} gabarits-cache; do
+      aws --endpoint-url http://s3:9000 s3api head-bucket --bucket $$b 2>/dev/null || aws --endpoint-url http://s3:9000 s3 mb s3://$$b;
+      done;
+      aws --endpoint-url http://s3:9000 s3api put-bucket-versioning --bucket $${S3_BUCKET_ACTES} --versioning-configuration Status=Enabled;
+      echo buckets prets
       "
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${S3_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${S3_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: us-east-1
       S3_BUCKET_ACTES: ${S3_BUCKET_ACTES:-actes}
       S3_BUCKET_PIECES: ${S3_BUCKET_PIECES:-pieces}
     networks: [data]
@@ -241,7 +259,7 @@ networks:
 volumes:
   pg-data: {}
   redis-data: {}
-  minio-data: {}
+  s3-data: {}
   clamav-db: {}
   prometheus-data: {}
   loki-data: {}

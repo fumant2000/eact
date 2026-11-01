@@ -5,7 +5,7 @@ changer de technologie ne touche pas aux modules.
 
 | Interface requise | Adaptateur V1 | Service Compose |
 |---|---|---|
-| `IStockage` | client S3 | `minio` |
+| `IStockage` | client S3 (SDK AWS) | `s3` (RustFS) |
 | `IConvertisseurPdf` | client HTTP Gotenberg (PDF/A-2b) | `gotenberg` |
 | `IAntivirus` | client clamd TCP | `clamav` |
 | `IDepotGabarits` / `IAnomalies` | GitHub App (JWT RS256 → jeton d'installation), disjoncteur | sortie Internet du `worker` |

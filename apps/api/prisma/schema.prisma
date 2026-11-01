@@ -1,6 +1,6 @@
 // Modèle physique EACT (CDC §17, figure 11).
 // Toute évolution passe par une migration versionnée : `npm run db:migrate`.
-// Compléments SQL hors Prisma (trigger audit, tsvector) : voir prisma/sql/.
+// Compléments SQL hors Prisma (triggers audit et plein texte) : fin de la migration init.
 
 generator client {
   provider = "prisma-client-js"
@@ -255,6 +255,8 @@ model Acte {
   referenceExterne   String?   @map("reference_externe") // n° du décret signé par l'autorité externe (BF-39)
 
   acteInitialId String?  @map("acte_initial_id") @db.Uuid // acte rectificatif (RG-10)
+  /// Plein texte FR/EN (BF-41), alimenté par le trigger acte_maj_recherche (migration init).
+  recherche     Unsupported("tsvector")?
   creeLe        DateTime @default(now()) @map("cree_le")
   misAJourLe    DateTime @updatedAt @map("mis_a_jour_le")
 
@@ -275,6 +277,7 @@ model Acte {
 
   @@unique([typeActeId, structureId, annee, sequence]) // RG-08 : pas de doublon
   @@index([statut, etapeCouranteId])
+  @@index([recherche], type: Gin)
   @@map("acte")
 }
 
@@ -386,7 +389,7 @@ model TransmissionExterne {
 
 // ───────────── M10 — Journal d'audit chaîné ─────────────
 
-/// Ajout seul : trigger anti UPDATE/DELETE dans prisma/sql/audit.sql (ADR 0004).
+/// Ajout seul : trigger anti UPDATE/DELETE dans la migration init (ADR 0004).
 model EvenementAudit {
   id             BigInt   @id @default(autoincrement())
   horodatage     DateTime @default(now())
