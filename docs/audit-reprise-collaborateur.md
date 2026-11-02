@@ -37,7 +37,7 @@ Volume : backend 1 231 lignes (5 modules, 18 routes) ; frontend ~2 000 lignes (7
 | Élevée | Journal d'audit modifiable (fichier JSON) ; l'empreinte ne couvre ni l'acteur ni la ressource ; consultation sans authentification. | BF-49, ADR 0004 |
 | Élevée | Anomalie « transmise à GitHub » alors que rien n'est envoyé ; anonymisation partielle (noms non retirés). | BF-61, RG-22 |
 | Moyenne | Rôles et statuts propres (`SIGNATAIRE`, `SG`, `ADMIN`, langue `BILINGUE`) différents de l'énumération du CDC et du schéma ; identifiants `acte-<horodatage>` au lieu d'UUID. | RG-01, §17 |
-| Moyenne | Règles inventées : ampliation obligatoire à la soumission ; circuit de note de service en 4 étapes au lieu de 3. | RG-03, tableau 3 |
+| Moyenne | Circuit de note de service en 4 étapes au lieu de 3. (L'ampliation obligatoire à la soumission, d'abord jugée inventée, est confirmée par la maquette C6 et a été reprise.) | tableau 3, RG-03 |
 | Moyenne | NestJS 10 et `ts-node` ; aucune validation des entrées (DTO non validés) ; aucun test. | ENF-07, tableau 24 |
 
 ## 4. Écarts avec les maquettes et le guide d'implémentation
