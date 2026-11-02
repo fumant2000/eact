@@ -14,16 +14,30 @@ services:
     environment:
       NODE_ENV: production
 
+  clamav:
+    profiles: !reset []   # antivirus réel toujours actif en production (RG-24)
+
   # Redondance active : 2 instances derrière nginx (TF-15).
   api:
     deploy:
       replicas: 2
     environment:
       NODE_ENV: production
+      ANTIVIRUS: clamav
+      DEMO_MODE: "false"
+    depends_on:
+      clamav: { condition: service_healthy }
 
   worker:
     deploy:
       replicas: 2         # les jobs répétés BullMQ ne s'exécutent qu'une fois (verrou Redis)
+    environment:
+      NODE_ENV: production
+      ANTIVIRUS: clamav
+
+  migrate:
+    environment:
+      NODE_ENV: production   # le seed ne crée pas de comptes de démonstration
 
   # Redondance passive : réplica alimenté par le WAL (ENF-04).
   postgres:

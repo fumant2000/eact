@@ -1,16 +1,17 @@
-# EACT — socle Docker Compose (CT-09, ENF-15)
+# EACT — Docker Compose (CT-09, ENF-15)
 #
 #   cp .env.example .env
-#   npm run infra                             # MODE LÉGER (dev, démo) : postgres + redis + mailpit ;
-#                                             #   api et web tournent sur le poste (npm run dev:api / dev:web)
-#   npm run infra:pdf                         # + gotenberg (génération du PDF/A à la signature)
-#   docker compose --profile dev up -d --build   # architecture complète conteneurisée (+ mailpit)
+#   docker compose up -d                      # DÉMO COMPLÈTE en une commande → http://localhost:8080
+#                                             #   (images construites au premier lancement ; après une
+#                                             #    modification du code : docker compose up -d --build)
+#   docker compose --profile antivirus up -d  # + ClamAV réel (~1 Go de RAM, mises à jour Internet)
 #   docker compose --profile obs up -d        # + prometheus / grafana / loki / alloy
+#
+#   Développement avec rechargement à chaud (mode léger) : npm run infra, puis npm run dev:api / dev:web.
 #
 # Les adresses ci-dessous sont des NOMS DE SERVICE Docker (transparence de localisation, CDC §16.5) :
 # elles ne viennent pas du .env, qui décrit le poste du développeur (localhost).
-#
-# Zones réseau (ADR 0006) : seul `nginx` publie un port.
+# Zones réseau (ADR 0006) : seul `nginx` publie un port (les ports de dev sont dans docker-compose.override.yml).
 
 name: eact
 
@@ -33,8 +34,14 @@ x-app-env: &app-env
   SMTP_HOST: mailpit
   SMTP_PORT: 1025
   MAIL_FROM: ${MAIL_FROM:-EACT MINESUP <ne-pas-repondre@eact.test>}
-  ANTIVIRUS: clamav
+  # Antivirus simulé par défaut (refuse le fichier test EICAR) ; ClamAV réel : ANTIVIRUS_CONTENEURS=clamav + profil antivirus
+  ANTIVIRUS: ${ANTIVIRUS_CONTENEURS:-simule}
   STOCKAGE: s3
+  # URL publique de l'application : liens des e-mails et QR imprimé sur les actes (mettre l'IP du poste pour un téléphone)
+  WEB_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+  # Mode démonstration : connexion en un clic, code TOTP affiché (désactivé de force en production)
+  DEMO_MODE: ${DEMO_MODE:-false}
+  DEMO_MOT_DE_PASSE: ${DEMO_MOT_DE_PASSE:-Minesup@2026}
   GITHUB_APP_ID: ${GITHUB_APP_ID:-}
   GITHUB_INSTALLATION_ID: ${GITHUB_INSTALLATION_ID:-}
   GITHUB_PRIVATE_KEY_PATH: /run/secrets/github_app_key
@@ -58,6 +65,7 @@ services:
 
   # ─────────────── Zone applicative ───────────────
   web:
+    pull_policy: build   # « docker compose up -d » reconstruit le code modifié (cache Docker : rapide sinon)
     build:
       context: .
       dockerfile: apps/web/Dockerfile
@@ -68,13 +76,15 @@ services:
     networks: [app]
     restart: unless-stopped
 
-  # Applique les migrations Prisma puis s'arrête ; l'API ne démarre qu'après.
+  # Applique les migrations Prisma, charge les données de démarrage (seed idempotent : organigramme, types,
+  # circuits, gabarits ; comptes de démo hors production), puis s'arrête. L'API ne démarre qu'après.
   migrate:
+    pull_policy: build   # « docker compose up -d » reconstruit le code modifié (cache Docker : rapide sinon)
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     image: eact/api:local
-    command: ["npx", "prisma", "migrate", "deploy"]
+    command: ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts"]
     environment: *app-env
     depends_on:
       postgres: { condition: service_healthy }
@@ -82,6 +92,7 @@ services:
     restart: "no"
 
   api:
+    pull_policy: build   # « docker compose up -d » reconstruit le code modifié (cache Docker : rapide sinon)
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -94,7 +105,7 @@ services:
       redis: { condition: service_healthy }
       s3-init: { condition: service_completed_successfully }
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/v1/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/v1/health"]  # pas localhost : IPv6 d'abord sous Alpine
       interval: 10s
       timeout: 3s
       retries: 10
@@ -105,6 +116,7 @@ services:
   # Même image que l'API, autre point d'entrée : files BullMQ (PDF/A, antivirus,
   # GitHub, notifications, relances). Seul service autorisé à sortir sur Internet.
   worker:
+    pull_policy: build   # « docker compose up -d » reconstruit le code modifié (cache Docker : rapide sinon)
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -116,7 +128,6 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       gotenberg: { condition: service_started }
-      clamav: { condition: service_healthy }
     networks: [app, data, egress]
     restart: unless-stopped
 
@@ -127,8 +138,10 @@ services:
     networks: [app]
     restart: unless-stopped
 
+  # Lourd (~1 Go de RAM, signatures téléchargées au démarrage) : profil « antivirus », avec ANTIVIRUS_CONTENEURS=clamav.
   clamav:
     image: clamav/clamav:1.4
+    profiles: [antivirus]
     healthcheck:
       test: ["CMD", "clamdcheck.sh"]
       interval: 30s
@@ -213,12 +226,13 @@ services:
     networks: [data]
     restart: "no"
 
-  # ─────────────── Outils de dev (profil dev) ───────────────
+  # ─────────────── Outil de dev et de démo ───────────────
   # Faux serveur SMTP : capte TOUS les e-mails (réinitialisation, notifications) ; boîte web sur :8025.
+  # Retiré en production (docker-compose.prod.yml).
   mailpit:
     image: axllent/mailpit:v1.27
-    profiles: [dev]
     networks: [app]
+    restart: unless-stopped
 
   # ─────────────── Supervision (profil obs) — ENF-03 ───────────────
   prometheus:

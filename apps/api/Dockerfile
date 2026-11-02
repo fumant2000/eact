@@ -23,6 +23,7 @@ COPY --from=build /repo/packages/shared packages/shared
 COPY --from=build /repo/apps/api/node_modules apps/api/node_modules
 COPY --from=build /repo/apps/api/package.json apps/api/package.json
 COPY --from=build /repo/apps/api/prisma apps/api/prisma
+COPY gabarits gabarits
 COPY --from=build /repo/apps/api/dist apps/api/dist
 WORKDIR /repo/apps/api
 USER node

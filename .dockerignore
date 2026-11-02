@@ -6,3 +6,4 @@
 .env
 infra/secrets
 docs
+**/.stockage
