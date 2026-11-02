@@ -20,6 +20,7 @@ import {
   UserCog,
   X,
   type LucideIcon,
+  Users,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -27,6 +28,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { SelecteurLangue } from '@/components/SelecteurLangue';
 import { Button, classesBouton } from '@/components/ui/primitives';
+import { DialogueChangerCompte, useModeDemo } from '@/features/auth/view/Demo';
 import { useSession } from '@/features/auth/view-model/useSession';
 import { parapheurApi } from '@/features/parapheur/model/parapheur.api';
 import { signatureApi } from '@/features/signature/model/signature.api';
@@ -155,6 +157,8 @@ export function Coque({ children }: { children: ReactNode }) {
   const session = useSession();
   const [tiroir, setTiroir] = useState(false);
   const [menuProfil, setMenuProfil] = useState(false);
+  const [changerCompte, setChangerCompte] = useState(false);
+  const demo = useModeDemo();
   const chemin = usePathname();
   useEffect(() => setTiroir(false), [chemin]);
   // Mode concentration : l'éditeur d'acte masque la barre latérale (guide d'implémentation §5, point 3).
@@ -199,6 +203,18 @@ export function Coque({ children }: { children: ReactNode }) {
             {menuProfil && (
               <div role="menu" className="absolute right-0 mt-2 w-56 rounded-lg border border-border bg-card p-1 text-foreground shadow-lg">
                 <p className="px-3 py-2 font-mono text-xs text-muted-foreground">{p.matricule}</p>
+                {demo?.actif && (
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuProfil(false);
+                      setChangerCompte(true);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-accent"
+                  >
+                    <Users size={16} aria-hidden /> {t('demo.changerCompte')}
+                  </button>
+                )}
                 <button role="menuitem" onClick={session.deconnecter} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-accent">
                   <LogOut size={16} aria-hidden /> {t('menu.deconnexion')}
                 </button>
@@ -207,6 +223,8 @@ export function Coque({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
+
+      <DialogueChangerCompte ouvert={changerCompte} onFermer={() => setChangerCompte(false)} actuel={p.matricule} />
 
       <div className="flex flex-1">
         <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] w-62 shrink-0 border-r border-border bg-card ${concentration ? '' : 'lg:block'}`}>

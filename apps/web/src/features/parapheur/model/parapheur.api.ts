@@ -34,7 +34,7 @@ export interface Suivi {
   redacteur: { nom: string; structure: string };
   creeLe: string;
   numeroVersion: number;
-  etapes: { ordre: number; libelle: string; delaiHeures: number; viseurs: string[] }[];
+  etapes: { ordre: number; libelle: string; delaiHeures: number; viseurs: string[]; franchieDOffice: boolean }[];
   historique: (
     | { type: 'SOUMISSION'; le: string; acteur: string; structure: string; version: number }
     | { type: 'VISA'; le: string; acteur: string; structure: string; etape: { ordre: number; libelle: string }; decision: Decision; observation: string | null; etapeRetour: number | null }

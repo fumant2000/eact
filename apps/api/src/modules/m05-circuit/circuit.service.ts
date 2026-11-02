@@ -99,31 +99,29 @@ export class CircuitService {
 
   // ─────────── RG-04 : qui peut viser une étape ───────────
 
-  async viseursEligibles(acte: Pick<ActeCircuit, 'redacteurId' | 'redacteur' | 'structureId'>, etape: EtapeCircuit): Promise<Viseur[]> {
-    let titulaires;
-    if (etape.roleRequis === Role.VISEUR) {
-      // Hiérarchie du rédacteur, coupée à la structure émettrice.
-      const lignee = await this.ascendants(acte.redacteur.structureId);
-      const fin = lignee.findIndex((s) => s.id === acte.structureId);
-      const hierarchie = fin >= 0 ? lignee.slice(0, fin + 1) : [lignee[0]];
-      const etapesViseur = await this.prisma.etapeCircuit.findMany({
-        where: { circuitId: etape.circuitId, roleRequis: Role.VISEUR },
-        orderBy: { ordre: 'asc' },
-      });
-      const rang = etapesViseur.findIndex((e) => e.id === etape.id);
-      const structure = hierarchie[Math.min(Math.max(rang, 0), hierarchie.length - 1)];
-      titulaires = await this.prisma.utilisateur.findMany({
-        where: { actif: true, structureId: structure.id, roles: { some: { role: Role.VISEUR } } },
-        include: { structure: true },
-      });
-    } else {
-      titulaires = await this.prisma.utilisateur.findMany({
-        where: { actif: true, roles: { some: { role: etape.roleRequis } } },
-        include: { structure: true },
-      });
+  /** Titulaires de l'étape, rédacteur compris. */
+  private async titulaires(acte: Pick<ActeCircuit, 'redacteur' | 'structureId'>, etape: EtapeCircuit) {
+    if (etape.roleRequis !== Role.VISEUR) {
+      return this.prisma.utilisateur.findMany({ where: { actif: true, roles: { some: { role: etape.roleRequis } } }, include: { structure: true } });
     }
-    titulaires = titulaires.filter((u) => u.id !== acte.redacteurId); // RG-19
+    // Hiérarchie du rédacteur, coupée à la structure émettrice : n-ième étape « viseur » = n-ième niveau.
+    const lignee = await this.ascendants(acte.redacteur.structureId);
+    const fin = lignee.findIndex((s) => s.id === acte.structureId);
+    const hierarchie = fin >= 0 ? lignee.slice(0, fin + 1) : [lignee[0]];
+    const etapesViseur = await this.prisma.etapeCircuit.findMany({
+      where: { circuitId: etape.circuitId, roleRequis: Role.VISEUR },
+      orderBy: { ordre: 'asc' },
+    });
+    const rang = etapesViseur.findIndex((e) => e.id === etape.id);
+    const structure = hierarchie[Math.min(Math.max(rang, 0), hierarchie.length - 1)];
+    return this.prisma.utilisateur.findMany({
+      where: { actif: true, structureId: structure.id, roles: { some: { role: Role.VISEUR } } },
+      include: { structure: true },
+    });
+  }
 
+  async viseursEligibles(acte: Pick<ActeCircuit, 'redacteurId' | 'redacteur' | 'structureId'>, etape: EtapeCircuit): Promise<Viseur[]> {
+    const titulaires = (await this.titulaires(acte, etape)).filter((u) => u.id !== acte.redacteurId); // RG-19
     const maintenant = new Date();
     const interims = await this.prisma.delegation.findMany({
       where: { type: TypeDelegation.INTERIM, actif: true, debut: { lte: maintenant }, fin: { gte: maintenant }, delegantId: { in: titulaires.map((u) => u.id) } },
@@ -235,6 +233,29 @@ export class CircuitService {
     return this.prisma.etapeCircuit.findFirst({ where: { circuitId: etape.circuitId, ordre: { gt: etape.ordre } }, orderBy: { ordre: 'asc' } });
   }
 
+  /**
+   * Première étape, à partir de `etape`, que quelqu'un peut effectivement viser.
+   * RG-19 interdit au rédacteur de viser son propre acte : quand il est lui-même le titulaire d'une étape
+   * (un chef de service qui rédige), sa rédaction vaut son visa à ce niveau et l'étape est franchie d'office.
+   * Une étape sans aucun titulaire laisserait l'acte invisible de tous : refus explicite.
+   * Retourne null quand toutes les étapes restantes sont franchies (l'acte est alors prêt à signer).
+   */
+  async etapeAViser(acte: Pick<ActeCircuit, 'redacteurId' | 'redacteur' | 'structureId'>, etape: EtapeCircuit | null) {
+    const franchies: EtapeCircuit[] = [];
+    while (etape) {
+      if ((await this.viseursEligibles(acte, etape)).length) return { etape, franchies };
+      if (!(await this.titulaires(acte, etape)).some((t) => t.id === acte.redacteurId)) {
+        throw new UnprocessableEntityException({
+          code: 'ETAPE_SANS_VISEUR',
+          message: `Personne ne peut viser l'étape « ${etape.libelle} » : l'administrateur doit attribuer ce rôle à un agent actif`,
+        });
+      }
+      franchies.push(etape);
+      etape = await this.etapeSuivante(etape);
+    }
+    return { etape: null, franchies };
+  }
+
   // ─────────── BF-24 à BF-26 : viser, corriger, rejeter ───────────
 
   async decider(acteId: string, dto: DecisionDto, u: UtilisateurConnecte) {
@@ -255,8 +276,11 @@ export class CircuitService {
     let donnees: Prisma.ActeUpdateManyMutationInput & { etapeCouranteId?: string | null };
     let evenement: string;
     let etapeRetour: number | undefined;
+    let franchies: number[] = [];
     if (dto.decision === DecisionVisa.FAVORABLE) {
-      const suivante = await this.etapeSuivante(etape);
+      const prochaine = await this.etapeAViser(acte, await this.etapeSuivante(etape));
+      const suivante = prochaine.etape;
+      franchies = prochaine.franchies.map((e) => e.ordre);
       if (suivante) {
         donnees = { etapeCouranteId: suivante.id, etapeEntreeLe: new Date() };
       } else {
@@ -274,7 +298,9 @@ export class CircuitService {
           throw new UnprocessableEntityException({ code: 'ETAPE_RETOUR_INVALIDE', message: 'Choisissez la rédaction ou une étape déjà franchie' });
         }
         // Le circuit repart de cette étape : nouveau tour, le viseur concerné pourra viser à nouveau (RG-18).
-        donnees = { etapeCouranteId: retour.id, etapeEntreeLe: new Date(), tourCircuit: { increment: 1 } };
+        // Une étape franchie d'office (le rédacteur en est le titulaire) renvoie à la suivante, au pire l'étape courante.
+        const cible = (await this.etapeAViser(acte, retour)).etape ?? etape;
+        donnees = { etapeCouranteId: cible.id, etapeEntreeLe: new Date(), tourCircuit: { increment: 1 } };
       }
       evenement = EVENEMENTS.ACTE_A_CORRIGER;
     } else {
@@ -291,7 +317,7 @@ export class CircuitService {
         data: { acteId, etapeId: etape.id, viseurId: u.sub, tourCircuit: acte.tourCircuit, decision: dto.decision, observation, etapeRetour },
       });
       await this.audit.journaliser(
-        { acteurId: u.sub, action: evenement, ressourceType: 'acte', ressourceId: acteId, details: { etape: etape.ordre, decision: dto.decision, etapeRetour } },
+        { acteurId: u.sub, action: evenement, ressourceType: 'acte', ressourceId: acteId, details: { etape: etape.ordre, decision: dto.decision, etapeRetour, ...(franchies.length && { etapesFranchiesRedacteur: franchies }) } },
         tx,
       );
     });
@@ -322,6 +348,8 @@ export class CircuitService {
         libelle: e.libelle,
         delaiHeures: e.delaiHeures,
         viseurs: (await this.viseursEligibles(acte, e)).map((v) => v.nom),
+        // RG-19 : étape dont le rédacteur est le titulaire, franchie d'office (voir etapeAViser).
+        franchieDOffice: (await this.titulaires(acte, e)).some((t) => t.id === acte.redacteurId) && !(await this.viseursEligibles(acte, e)).length,
       })),
     );
     const historique = [

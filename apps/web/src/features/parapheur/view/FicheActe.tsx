@@ -53,11 +53,15 @@ function Frise({ vm }: { vm: VM }) {
         date: etat === 'fait' || etat === 'renvoye' ? visa?.le : undefined,
         detail: (
           <>
-            <span className="block text-muted-foreground">{moi ? `${t('fiche.vous')} · ` : ''}{visa && etat !== 'aVenir' ? visa.acteur : e.viseurs.join(', ')}</span>
+            {e.franchieDOffice ? (
+              <span className="block text-muted-foreground">{t('fiche.franchieDOffice', { nom: s.redacteur.nom })}</span>
+            ) : (
+              <span className="block text-muted-foreground">{moi ? `${t('fiche.vous')} · ` : ''}{visa && etat !== 'aVenir' ? visa.acteur : e.viseurs.join(', ')}</span>
+            )}
             {etat === 'fait' && visa?.type === 'VISA' && <span className="block text-success">{t(`parapheur.decision.${visa.decision}` as CleTraduction)}</span>}
             {etat === 'renvoye' && visa?.type === 'VISA' && <span className="block text-warning">{t(`parapheur.decision.${visa.decision}` as CleTraduction)}</span>}
             {etat === 'courant' && <span className="block text-primary">{moi ? t('fiche.enAttenteVous') : t('fiche.enAttente')}</span>}
-            {etat === 'aVenir' && <span className="block text-muted-foreground">{t('fiche.aVenir', { d: e.delaiHeures })}</span>}
+            {etat === 'aVenir' && !e.franchieDOffice && <span className="block text-muted-foreground">{t('fiche.aVenir', { d: e.delaiHeures })}</span>}
             {visa?.type === 'VISA' && visa.observation && etat !== 'aVenir' && <span className="mt-2 block rounded-md bg-muted p-2 text-sm">« {visa.observation} »</span>}
           </>
         ),

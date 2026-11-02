@@ -365,7 +365,13 @@ export class ActesService {
     const dernierRenvoi = resoumission
       ? await this.prisma.visa.findFirst({ where: { acteId: id, decision: 'CORRECTION' }, orderBy: { creeLe: 'desc' } })
       : null;
-    const etapeDepart = circuit.etapes.find((e) => e.ordre === dernierRenvoi?.etapeRetour) ?? circuit.etapes[0];
+    const etapePrevue = circuit.etapes.find((e) => e.ordre === dernierRenvoi?.etapeRetour) ?? circuit.etapes[0];
+    // RG-19 : les étapes dont le rédacteur est lui-même le titulaire sont franchies d'office (M05).
+    const redacteur = await this.prisma.utilisateur.findUniqueOrThrow({ where: { id: acte.redacteurId } });
+    const { etape: etapeDepart, franchies } = await this.circuits.etapeAViser({ ...acte, redacteur }, etapePrevue);
+    if (!etapeDepart) {
+      throw new UnprocessableEntityException({ code: 'CIRCUIT_SANS_VISEUR', message: 'Vous êtes titulaire de toutes les étapes de ce circuit : il ne peut pas être visé par un tiers' });
+    }
 
     await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.acte.updateMany({
@@ -390,7 +396,12 @@ export class ActesService {
           action: EVENEMENTS.ACTE_SOUMIS,
           ressourceType: 'acte',
           ressourceId: id,
-          details: { etape: etapeDepart.ordre, version: acte.versions.length + 1, resoumission },
+          details: {
+            etape: etapeDepart.ordre,
+            version: acte.versions.length + 1,
+            resoumission,
+            ...(franchies.length && { etapesFranchiesRedacteur: franchies.map((e) => e.ordre) }),
+          },
         },
         tx,
       );
