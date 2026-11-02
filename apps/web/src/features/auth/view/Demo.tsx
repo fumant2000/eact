@@ -3,7 +3,7 @@
 // Mode démonstration (DEMO_MODE=true côté API, jamais en production) : comptes en un clic et code TOTP affiché.
 // Permet de présenter la double authentification et la signature sans téléphone.
 import { useQuery } from '@tanstack/react-query';
-import { FlaskConical, KeyRound, LogIn } from 'lucide-react';
+import { ChevronDown, FlaskConical, KeyRound, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Button, cx } from '@/components/ui/primitives';
@@ -15,54 +15,92 @@ export function useModeDemo() {
   return useQuery({ queryKey: ['demo'], queryFn: authApi.demo, staleTime: 60_000, retry: false, meta: { silencieux: true } }).data;
 }
 
-/** Panneau de la page de connexion : chaque compte en un clic, ou pré-rempli pour montrer le parcours normal. */
+/** Panneau de la page de connexion, replié par défaut pour ne pas écraser le formulaire :
+ *  on déplie, on choisit un compte dans la liste, puis « Entrer » ou « Pré-remplir ». */
 export function PanneauDemo({ remplir }: { remplir: (matricule: string, motDePasse: string) => void }) {
   const { t } = useT();
   const router = useRouter();
   const demo = useModeDemo();
-  const [enCours, setEnCours] = useState<string | null>(null);
+  const [ouvert, setOuvert] = useState(false);
+  const [choisi, setChoisi] = useState<string | null>(null);
+  const [enCours, setEnCours] = useState(false);
   if (!demo?.actif) return null;
+  const compte = demo.comptes.find((c) => c.matricule === choisi) ?? null;
 
   async function entrer(matricule: string) {
-    setEnCours(matricule);
+    setEnCours(true);
     try {
       await authApi.connexionDemo(matricule);
       router.replace('/mon-travail');
       router.refresh();
     } catch (e) {
       notifierErreur(e);
-      setEnCours(null);
+      setEnCours(false);
     }
   }
 
   return (
-    <section className="mt-4 rounded-lg border-2 border-dashed border-primary-300 bg-card p-4" aria-labelledby="titre-demo">
-      <h2 id="titre-demo" className="flex items-center gap-2 font-semibold text-primary-900 dark:text-foreground">
-        <FlaskConical size={18} aria-hidden /> {t('demo.titre')}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">{t('demo.aide', { mdp: demo.motDePasse })}</p>
-      <ul className="mt-3 divide-y divide-border">
-        {demo.comptes.map((c) => (
-          <li key={c.matricule} className="flex flex-wrap items-center gap-2 py-2">
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">
-                {c.nom}
-                {c.totp && <span className="ml-2 rounded bg-[#fbf3e2] px-1.5 py-0.5 text-[11px] text-seal-700">2FA</span>}
-                {c.verrouille && <span className="ml-2 rounded bg-[#fdecec] px-1.5 py-0.5 text-[11px] text-destructive">{t('demo.verrouille')}</span>}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {c.roles.map((r) => t(`role.${r}` as CleTraduction)).join(', ')} · {c.structure}
-              </p>
-            </div>
-            <Button size="sm" variant="ghost" title={t('demo.remplir')} aria-label={`${t('demo.remplir')} : ${c.nom}`} onClick={() => remplir(c.matricule, demo.motDePasse)}>
-              <KeyRound size={16} aria-hidden />
+    <section className="mt-4 rounded-lg border border-dashed border-primary-300 bg-card text-sm">
+      <button
+        type="button"
+        onClick={() => setOuvert((o) => !o)}
+        aria-expanded={ouvert}
+        aria-controls="liste-demo"
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary"
+      >
+        <FlaskConical size={16} className="text-primary" aria-hidden />
+        <span className="font-medium text-primary-900 dark:text-foreground">{t('demo.titre')}</span>
+        <span className="text-muted-foreground">· {t('demo.nbComptes', { n: demo.comptes.length })}</span>
+        <ChevronDown size={16} aria-hidden className={cx('ml-auto text-muted-foreground transition-transform', ouvert && 'rotate-180')} />
+      </button>
+
+      {ouvert && (
+        <div id="liste-demo" className="border-t border-dashed border-primary-300 p-3">
+          <p className="text-xs text-muted-foreground">{t('demo.aide', { mdp: demo.motDePasse })}</p>
+          <ul role="listbox" aria-label={t('demo.choisir')} className="mt-2 max-h-56 overflow-y-auto rounded-md border border-border">
+            {demo.comptes.map((c) => {
+              const actif = c.matricule === choisi;
+              return (
+                <li
+                  key={c.matricule}
+                  role="option"
+                  aria-selected={actif}
+                  tabIndex={0}
+                  onClick={() => setChoisi(c.matricule)}
+                  onDoubleClick={() => void entrer(c.matricule)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void entrer(c.matricule);
+                    if (e.key === ' ') { e.preventDefault(); setChoisi(c.matricule); }
+                  }}
+                  className={cx(
+                    'flex cursor-pointer items-center gap-2 border-b border-border px-3 py-1.5 last:border-b-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
+                    actif ? 'bg-primary-50 dark:bg-accent' : 'hover:bg-accent',
+                  )}
+                >
+                  <span className={cx('h-2 w-2 flex-none rounded-full', actif ? 'bg-primary' : 'bg-transparent')} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium">{c.nom}</span>
+                    <span className="text-xs text-muted-foreground"> · {c.roles.map((r) => t(`role.${r}` as CleTraduction)).join(', ')}</span>
+                  </span>
+                  {c.totp && <span className="rounded bg-[#fbf3e2] px-1.5 text-[11px] text-seal-700">2FA</span>}
+                  {c.verrouille && <span className="rounded bg-[#fdecec] px-1.5 text-[11px] text-destructive">{t('demo.verrouille')}</span>}
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+              {compte ? `${compte.matricule} · ${compte.structure}` : t('demo.choisir')}
+            </p>
+            <Button size="sm" variant="outline" disabled={!compte} onClick={() => compte && remplir(compte.matricule, demo.motDePasse)}>
+              <KeyRound size={14} aria-hidden /> {t('demo.remplir')}
             </Button>
-            <Button size="sm" onClick={() => void entrer(c.matricule)} disabled={!!enCours}>
-              <LogIn size={16} aria-hidden /> {t('demo.entrer')}
+            <Button size="sm" disabled={!compte || enCours} onClick={() => compte && void entrer(compte.matricule)}>
+              <LogIn size={14} aria-hidden /> {t('demo.entrer')}
             </Button>
-          </li>
-        ))}
-      </ul>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
