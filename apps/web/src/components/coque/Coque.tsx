@@ -27,6 +27,7 @@ import { SelecteurLangue } from '@/components/SelecteurLangue';
 import { Button, classesBouton } from '@/components/ui/primitives';
 import { useSession } from '@/features/auth/view-model/useSession';
 import { parapheurApi } from '@/features/parapheur/model/parapheur.api';
+import { signatureApi } from '@/features/signature/model/signature.api';
 import { useT, type CleTraduction } from '@/i18n';
 
 interface EntreeMenu {
@@ -35,7 +36,7 @@ interface EntreeMenu {
   icone: LucideIcon;
   roles?: string[]; // absent = tout utilisateur interne
   bientot?: boolean; // hors P0 : entrée grisée (brief design)
-  compteur?: 'parapheur';
+  compteur?: 'parapheur' | 'signature';
 }
 
 const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
@@ -44,7 +45,7 @@ const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
     entrees: [
       { href: '/mon-travail', cle: 'menu.monTravail', icone: Home },
       { href: '/parapheur', cle: 'menu.parapheur', icone: Inbox, roles: ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'], compteur: 'parapheur' },
-      { href: '/signature', cle: 'menu.signature', icone: PenTool, roles: ['AUTORITE_SIGNATAIRE'], bientot: true },
+      { href: '/signature', cle: 'menu.signature', icone: PenTool, roles: ['AUTORITE_SIGNATAIRE', 'DELEGATAIRE_SIGNATURE'], compteur: 'signature' },
       { href: '/mes-actes', cle: 'menu.mesActes', icone: Files, roles: ['REDACTEUR'] },
       { href: '/delegations', cle: 'menu.delegations', icone: UserCog, roles: ['AUTORITE_SIGNATAIRE', 'SECRETAIRE_GENERAL', 'ADMINISTRATEUR'], bientot: true },
     ],
@@ -75,6 +76,13 @@ function BarreLaterale({ roles, onNaviguer }: { roles: string[]; onNaviguer?: ()
     enabled: roles.some((r) => ROLES_VISEURS.includes(r)),
     refetchInterval: 60_000,
   });
+  const aSigner = useQuery({
+    queryKey: ['a-signer'],
+    queryFn: signatureApi.aSigner,
+    enabled: roles.some((r) => r === 'AUTORITE_SIGNATAIRE' || r === 'DELEGATAIRE_SIGNATURE'),
+    refetchInterval: 60_000,
+  });
+  const compteurs = { parapheur: parapheur.data?.aViser.length ?? 0, signature: aSigner.data?.length ?? 0 };
   return (
     <nav className="flex h-full flex-col gap-6 p-4" aria-label="Navigation principale">
       {roles.includes('REDACTEUR') && (
@@ -96,8 +104,8 @@ function BarreLaterale({ roles, onNaviguer }: { roles: string[]; onNaviguer?: ()
                     <e.icone size={18} aria-hidden />
                     <span className="flex-1">{t(e.cle)}</span>
                     {e.bientot && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{t('menu.bientot')}</span>}
-                    {e.compteur && !!parapheur.data?.aViser.length && (
-                      <span className="rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-label={`${parapheur.data.aViser.length}`}>{parapheur.data.aViser.length}</span>
+                    {e.compteur && compteurs[e.compteur] > 0 && (
+                      <span className="rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground">{compteurs[e.compteur]}</span>
                     )}
                   </>
                 );
@@ -150,6 +158,8 @@ export function Coque({ children }: { children: ReactNode }) {
     return <p className="grid min-h-screen place-items-center text-muted-foreground">{t('commun.chargement')}</p>;
   }
   const p = session.profil;
+  // Un délégataire de signature en cours (BF-09) voit l'entrée « À signer » comme le titulaire.
+  const rolesMenu = p.delegationsActives.some((d) => d.type === 'SIGNATURE') ? [...p.roles, 'DELEGATAIRE_SIGNATURE'] : p.roles;
   const reste = session.resteAvantFermeture;
 
   return (
@@ -194,7 +204,7 @@ export function Coque({ children }: { children: ReactNode }) {
 
       <div className="flex flex-1">
         <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] w-62 shrink-0 border-r border-border bg-card ${concentration ? '' : 'lg:block'}`}>
-          <BarreLaterale roles={p.roles} />
+          <BarreLaterale roles={rolesMenu} />
         </aside>
         {tiroir && (
           <div className={`fixed inset-0 z-40 ${concentration ? '' : 'lg:hidden'}`} role="dialog" aria-modal aria-label="Menu">
@@ -203,7 +213,7 @@ export function Coque({ children }: { children: ReactNode }) {
               <button className="absolute top-3 right-3 grid size-11 place-items-center" aria-label="Fermer le menu" onClick={() => setTiroir(false)}>
                 <X size={20} />
               </button>
-              <div className="h-full pt-12"><BarreLaterale roles={p.roles} onNaviguer={() => setTiroir(false)} /></div>
+              <div className="h-full pt-12"><BarreLaterale roles={rolesMenu} onNaviguer={() => setTiroir(false)} /></div>
             </aside>
           </div>
         )}

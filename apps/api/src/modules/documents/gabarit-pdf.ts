@@ -96,5 +96,5 @@ export function htmlActeSigne(a: DonneesActeSigne): string {
 
 /** Pied de page Gotenberg : numérotation des pages (les classes pageNumber / totalPages sont remplies par Chromium). */
 export const PIED_DE_PAGE = `<html><head><style>
-  body { font-family: Arial, sans-serif; font-size: 8pt; color: #5b6478; width: 100%; margin: 0 0.7in; text-align: right; }
-</style></head><body>Page <span class="pageNumber"></span> / <span class="totalPages"></span></body></html>`;
+  body { font-family: Arial, sans-serif; font-size: 8pt; color: #5b6478; width: 100%; margin: 0; padding: 0 0.7in; box-sizing: border-box; text-align: right; }
+</style></head><body>Page&nbsp;<span class="pageNumber"></span>&nbsp;/&nbsp;<span class="totalPages"></span></body></html>`;

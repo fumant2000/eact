@@ -37,7 +37,7 @@ const INCLUSIONS = {
   typeActe: true,
   structure: true,
   modele: { select: { libelle: true, version: true } },
-  destinataires: { orderBy: { libelle: 'asc' } },
+  destinataires: { orderBy: { ordre: 'asc' } },
   pieces: { orderBy: { creeLe: 'asc' } },
   etapeCourante: true,
   versions: { select: { id: true } },
@@ -123,7 +123,7 @@ export class ActesService {
         objet: '',
         contenu: modele ? sanitizeHtml(modele.contenuCache, HTML_AUTORISE) : '',
         langue: modele?.langue ?? 'FR',
-        destinataires: { create: (modele?.ampliationsDefaut ?? []).map((libelle) => ({ libelle })) },
+        destinataires: { create: (modele?.ampliationsDefaut ?? []).map((libelle, ordre) => ({ libelle, ordre })) },
       },
     });
     this.events.emit(EVENEMENTS.ACTE_CREE, {
@@ -301,7 +301,7 @@ export class ActesService {
       if (ampliations) {
         await tx.destinataire.deleteMany({ where: { acteId: id } });
         const uniques = [...new Set(ampliations.map((a) => a.trim()).filter(Boolean))];
-        await tx.destinataire.createMany({ data: uniques.map((libelle) => ({ acteId: id, libelle })) });
+        await tx.destinataire.createMany({ data: uniques.map((libelle, ordre) => ({ acteId: id, libelle, ordre })) });
       }
       const maj = await tx.acte.findUniqueOrThrow({ where: { id }, select: { version: true, misAJourLe: true } });
       return maj;

@@ -407,6 +407,7 @@ model Destinataire {
   id        String    @id @default(uuid()) @db.Uuid
   acteId    String    @map("acte_id") @db.Uuid
   libelle   String
+  ordre     Int       @default(0) // l'ordre de la liste d'ampliation est celui de l'acte
   email     String?
   interne   Boolean   @default(true)
   notifieLe DateTime? @map("notifie_le") // BF-35

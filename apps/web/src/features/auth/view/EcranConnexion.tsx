@@ -9,18 +9,8 @@ import { Alert, Button, Card, Input, Label } from '@/components/ui/primitives';
 import { useT } from '@/i18n';
 import { useConnexionViewModel } from '../view-model/useConnexionViewModel';
 import { CadreAuth } from './CadreAuth';
+import { CodeDemo, PanneauDemo } from './Demo';
 import { SaisieCode } from './SaisieCode';
-
-// Comptes du seed (apps/api/prisma/seed.ts) — affichés uniquement en développement, pour les démonstrations.
-const COMPTES_DEMO = [
-  ['MINESUP-04812', 'Christelle EBOGO', 'Rédactrice · SP'],
-  ['MINESUP-02845', 'Marie BELINGA', 'Chef de service · SP'],
-  ['MINESUP-03107', 'Abdou NJOYA', 'Directeur · DAG'],
-  ['MINESUP-00017', 'Ibrahim BELLO', 'Secrétaire Général · TOTP'],
-  ['MINESUP-00001', 'Roger ESSOMBA', 'Ministre · TOTP'],
-  ['MINESUP-02019', 'Hervé TCHAMBA', 'Administrateur · enrôlement TOTP'],
-  ['MINESUP-07341', 'Aïcha MOUSSA', 'Auditrice · IGS'],
-] as const;
 
 function IconeTitre({ children, ton = 'primaire' }: { children: React.ReactNode; ton?: 'primaire' | 'danger' }) {
   return (
@@ -31,7 +21,6 @@ function IconeTitre({ children, ton = 'primaire' }: { children: React.ReactNode;
 }
 
 export function EcranConnexion() {
-  const { t } = useT();
   const vm = useConnexionViewModel();
   const sessionExpiree = useSearchParams().get('session') === 'expiree';
 
@@ -42,7 +31,16 @@ export function EcranConnexion() {
       {vm.ecran === 'enrolement' && <Enrolement vm={vm} />}
       {vm.ecran === 'codesSecours' && <CodesSecours vm={vm} />}
       {vm.ecran === 'verrouille' && <CompteVerrouille vm={vm} />}
-      {vm.ecran === 'identifiants' && process.env.NODE_ENV === 'development' && <ComptesDemo t={t} />}
+      {vm.ecran === 'identifiants' && (
+        <PanneauDemo
+          remplir={(matricule, motDePasse) => {
+            const champ = (id: string) => document.getElementById(id) as HTMLInputElement | null;
+            champ('identifiant')!.value = matricule;
+            champ('motDePasse')!.value = motDePasse;
+            champ('motDePasse')!.focus();
+          }}
+        />
+      )}
     </CadreAuth>
   );
 }
@@ -143,6 +141,7 @@ function FormulaireCode({ vm }: { vm: VM }) {
         ) : (
           <SaisieCode valeur={code} onChange={setCode} invalide={invalide} idDescription="erreur-code" autoFocus />
         )}
+        {!secours && <CodeDemo source="mfa" onUtiliser={(c) => vm.verifierCode(c)} />}
         {vm.erreur && (
           <p id="erreur-code" role="alert" className="text-sm text-destructive">
             {t('mfa.invalide')} {vm.erreur.essaisRestants !== undefined && t('mfa.essais', { n: vm.erreur.essaisRestants })}
@@ -208,6 +207,7 @@ function Enrolement({ vm }: { vm: VM }) {
           {etape(3, t('enrolement.etape3'))}
           <div className="ml-10">
             <SaisieCode valeur={code} onChange={setCode} invalide={!!vm.erreur} idDescription="erreur-enrolement" />
+            <div className="mt-3"><CodeDemo source="mfa" onUtiliser={setCode} /></div>
             {vm.erreur && <p id="erreur-enrolement" role="alert" className="mt-2 text-sm text-destructive">{t('mfa.invalide')}</p>}
           </div>
           <div className="flex justify-end">
@@ -267,30 +267,5 @@ function CompteVerrouille({ vm }: { vm: VM }) {
       <p className="mt-6 text-sm text-muted-foreground">{t('verrou.prevenir')}</p>
       <Button variant="link" className="mt-4" onClick={vm.recommencer}>{t('commun.retourConnexion')}</Button>
     </Card>
-  );
-}
-
-function ComptesDemo({ t }: { t: ReturnType<typeof useT>['t'] }) {
-  const remplir = (matricule: string) => {
-    const champ = (id: string) => document.getElementById(id) as HTMLInputElement | null;
-    champ('identifiant')!.value = matricule;
-    champ('motDePasse')!.value = 'Minesup@2026';
-    champ('motDePasse')!.focus();
-  };
-  return (
-    <details className="mt-4 rounded-lg border border-dashed border-border bg-card p-4 text-sm">
-      <summary className="cursor-pointer font-medium text-muted-foreground">{t('auth.comptesDemo')}</summary>
-      <p className="mt-2 text-muted-foreground">Mot de passe : <code className="font-mono">Minesup@2026</code> · secret TOTP : <code className="font-mono">JBSWY3DPEHPK3PXP</code></p>
-      <ul className="mt-3 divide-y divide-border">
-        {COMPTES_DEMO.map(([matricule, nom, role]) => (
-          <li key={matricule}>
-            <button type="button" onClick={() => remplir(matricule)} className="flex w-full justify-between gap-2 py-2 text-left hover:text-primary">
-              <span><strong>{nom}</strong> <span className="text-muted-foreground">· {role}</span></span>
-              <code className="font-mono text-xs text-muted-foreground">{matricule}</code>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </details>
   );
 }

@@ -36,3 +36,9 @@ export class ReinitialisationDto {
   @Matches(POLITIQUE_MOT_DE_PASSE, { message: 'Le mot de passe ne respecte pas la politique de sécurité' })
   motDePasse!: string;
 }
+
+export class ConnexionDemoDto {
+  @ApiProperty({ example: 'MINESUP-00001' })
+  @IsString() @IsNotEmpty() @MaxLength(40)
+  matricule!: string;
+}

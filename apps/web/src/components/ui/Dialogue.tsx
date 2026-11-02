@@ -9,12 +9,17 @@ export function Dialogue({
   titre,
   children,
   alerte = false,
+  large = false,
+  bloquant = false,
 }: {
   ouvert: boolean;
   onFermer: () => void;
   titre: ReactNode;
   children: ReactNode;
   alerte?: boolean;
+  large?: boolean;
+  /** Traitement en cours : ni Échap ni clic extérieur ne ferment la fenêtre. */
+  bloquant?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -30,8 +35,9 @@ export function Dialogue({
       role={alerte ? 'alertdialog' : 'dialog'}
       aria-labelledby="titre-dialogue"
       onClose={onFermer}
-      onClick={(e) => !alerte && e.target === ref.current && onFermer()}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border border-border bg-card p-0 text-foreground shadow-xl backdrop:bg-black/40"
+      onCancel={(e) => bloquant && e.preventDefault()}
+      onClick={(e) => !alerte && !bloquant && e.target === ref.current && onFermer()}
+      className={`m-auto w-[calc(100%-2rem)] ${large ? 'max-w-3xl' : 'max-w-lg'} rounded-lg border border-border bg-card p-0 text-foreground shadow-xl backdrop:bg-black/40`}
     >
       {ouvert && (
         <div className="p-6">

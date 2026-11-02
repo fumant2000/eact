@@ -31,6 +31,15 @@ export const authApi = {
     appelApi<ReponseEtape>('/v1/auth/mfa/enrolement/confirmation', { method: 'POST', json: { code } }),
   profil: () => appelApi<Profil>('/v1/auth/moi'),
   deconnecter: () => appelApi<{ ok: true }>('/v1/auth/logout', { method: 'POST' }),
+  // Mode démonstration (DEMO_MODE=true côté API)
+  demo: () =>
+    appelApi<
+      | { actif: false }
+      | { actif: true; motDePasse: string; comptes: { matricule: string; nom: string; structure: string; roles: string[]; totp: boolean; verrouille: boolean }[] }
+    >('/v1/auth/demo'),
+  connexionDemo: (matricule: string) => appelApi<ReponseEtape>('/v1/auth/demo/connexion', { method: 'POST', json: { matricule } }),
+  codeDemoMfa: () => appelApi<{ code: string; valableEncore: number }>('/v1/auth/demo/code-mfa'),
+  codeDemo: () => appelApi<{ code: string; valableEncore: number }>('/v1/auth/demo/code'),
   demanderReinitialisation: (identifiant: string) =>
     appelApi<{ destinataire?: string }>('/v1/auth/mot-de-passe/oubli', { method: 'POST', json: { identifiant } }),
   reinitialiser: (jeton: string, motDePasse: string) =>

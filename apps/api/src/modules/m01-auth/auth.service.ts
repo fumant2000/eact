@@ -316,6 +316,55 @@ export class AuthService {
     };
   }
 
+  // ─────────── Mode démonstration (développement uniquement) ───────────
+  // Permet de présenter EACT sans téléphone : connexion en un clic et code TOTP affiché à l'écran.
+  // Inactif si DEMO_MODE n'est pas « true » ou si NODE_ENV=production (CDC tableau 24 : aucun contournement en production).
+
+  static modeDemo(): boolean {
+    return process.env.DEMO_MODE === 'true' && process.env.NODE_ENV !== 'production';
+  }
+
+  async comptesDemo() {
+    const comptes = await this.prisma.utilisateur.findMany({
+      where: { actif: true },
+      include: { roles: true, structure: true },
+      orderBy: { matricule: 'asc' },
+    });
+    return comptes.map((u) => ({
+      matricule: u.matricule,
+      nom: `${u.prenom} ${u.nom}`,
+      structure: u.structure.libelle,
+      roles: u.roles.map((r) => r.role),
+      totp: u.totpActive || u.roles.some((r) => ROLES_MFA_OBLIGATOIRE.includes(r.role)),
+      verrouille: !!u.verrouilleJusqua && u.verrouilleJusqua > new Date(),
+    }));
+  }
+
+  async connexionDemo(matricule: string, ip: string): Promise<ResultatConnexion> {
+    const u = await this.prisma.utilisateur.findUnique({ where: { matricule } });
+    if (!u?.actif) throw new UnauthorizedException({ code: 'IDENTIFIANTS_INCORRECTS', message: 'Compte de démonstration introuvable' });
+    await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsConnexion: 0, verrouilleJusqua: null } });
+    return { etape: 'CONNECTE', jetons: await this.ouvrirSession(u.id, ip, true, { demo: true }) };
+  }
+
+  private codeCourant(secretChiffre: string | null) {
+    if (!secretChiffre) throw new ConflictException({ code: 'MFA_NON_ACTIVE', message: 'Aucun secret TOTP pour ce compte' });
+    const secret = this.chiffrement.dechiffrer(secretChiffre);
+    return { code: authenticator.generate(secret), valableEncore: authenticator.timeRemaining() };
+  }
+
+  /** Code TOTP de l'utilisateur en attente de second facteur (écrans B2, B3). */
+  async codeDemoMfa(jetonMfa: string | undefined) {
+    const u = await this.utilisateurEnAttenteMfa(jetonMfa);
+    return this.codeCourant(u.totpSecretChiffre);
+  }
+
+  /** Code TOTP de l'utilisateur connecté (signature, E3). */
+  async codeDemo(utilisateurId: string) {
+    const u = await this.prisma.utilisateur.findUniqueOrThrow({ where: { id: utilisateurId } });
+    return this.codeCourant(u.totpSecretChiffre);
+  }
+
   // ─────────── BF-05 : réinitialisation par lien à usage unique ───────────
 
   async demanderReinitialisation(identifiant: string, ip: string): Promise<{ destinataire?: string }> {

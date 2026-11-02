@@ -2,6 +2,7 @@
 
 // Gabarit commun des écrans B1–B5 : panneau institutionnel à gauche (masqué sous 1024 px), carte à droite.
 import { FileText, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { SelecteurLangue } from '@/components/SelecteurLangue';
 import { useT } from '@/i18n';
@@ -54,7 +55,7 @@ export function CadreAuth({ children }: { children: ReactNode }) {
         <footer className="flex w-full max-w-md flex-wrap justify-between gap-2 text-sm text-muted-foreground">
           <span>EACT v0.1.0</span>
           <span className="flex gap-4">
-            <span>{t('commun.verifierActe')}</span>
+            <Link href="/verifier" className="underline underline-offset-4 hover:text-foreground">{t('commun.verifierActe')}</Link>
             <span>{t('commun.protectionDonnees')}</span>
           </span>
         </footer>

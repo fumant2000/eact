@@ -2,17 +2,17 @@
 
 // S-02 « Mon travail » : page d'arrivée. Les compteurs seront alimentés par le parapheur (It. 2).
 import { FilePen, Inbox, PenTool, Undo2, UserCog } from 'lucide-react';
-import { Alert } from '@/components/ui/primitives';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { actesApi } from '@/features/actes/model/actes.api';
 import { useProfil } from '@/features/auth/view-model/useSession';
 import { parapheurApi } from '@/features/parapheur/model/parapheur.api';
+import { signatureApi } from '@/features/signature/model/signature.api';
 import { useT, type CleTraduction } from '@/i18n';
 
 const COMPTEURS = [
   { cle: 'monTravail.aViser', icone: Inbox, roles: ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'], lien: '/parapheur' },
-  { cle: 'monTravail.aSigner', icone: PenTool, roles: ['AUTORITE_SIGNATAIRE'] },
+  { cle: 'monTravail.aSigner', icone: PenTool, roles: ['AUTORITE_SIGNATAIRE', 'DELEGATAIRE_SIGNATURE'], lien: '/signature' },
   { cle: 'monTravail.aCorriger', icone: Undo2, roles: ['REDACTEUR'], groupe: 'aCorriger', lien: '/mes-actes' },
   { cle: 'monTravail.brouillons', icone: FilePen, roles: ['REDACTEUR'], groupe: 'brouillons', lien: '/mes-actes' },
 ] as const;
@@ -24,8 +24,11 @@ export default function MonTravailPage() {
   const { data: mesActes } = useQuery({ queryKey: ['mes-actes'], queryFn: actesApi.mesActes, enabled: redacteur });
   const viseur = !!profil?.roles.some((r) => ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'].includes(r));
   const { data: parapheur } = useQuery({ queryKey: ['parapheur'], queryFn: parapheurApi.lister, enabled: viseur });
+  const signataire = !!profil && (profil.roles.includes('AUTORITE_SIGNATAIRE') || profil.delegationsActives.some((d) => d.type === 'SIGNATURE'));
+  const { data: aSigner } = useQuery({ queryKey: ['a-signer'], queryFn: signatureApi.aSigner, enabled: signataire });
   if (!profil) return null;
-  const visibles = COMPTEURS.filter((c) => c.roles.some((r) => profil.roles.includes(r)));
+  const roles = signataire ? [...profil.roles, 'DELEGATAIRE_SIGNATURE'] : profil.roles;
+  const visibles = COMPTEURS.filter((c) => c.roles.some((r) => roles.includes(r)));
 
   return (
     <section className="space-y-6">
@@ -52,17 +55,12 @@ export default function MonTravailPage() {
           {visibles.map((c) => (
             <li key={c.cle} className="relative rounded-lg border border-border bg-card p-5 hover:border-primary-300">
               <c.icone size={20} className="text-primary" aria-hidden />
-              <p className="mt-3 text-3xl font-semibold tabular-nums">{'groupe' in c && mesActes ? mesActes.compteurs[c.groupe] : c.cle === 'monTravail.aViser' ? (parapheur?.aViser.length ?? 0) : 0}</p>
-              {'lien' in c ? (
-                <Link href={c.lien} className="text-muted-foreground after:absolute after:inset-0">{t(c.cle)}</Link>
-              ) : (
-                <p className="text-muted-foreground">{t(c.cle)}</p>
-              )}
+              <p className="mt-3 text-3xl font-semibold tabular-nums">{'groupe' in c && mesActes ? mesActes.compteurs[c.groupe] : c.cle === 'monTravail.aViser' ? (parapheur?.aViser.length ?? 0) : c.cle === 'monTravail.aSigner' ? (aSigner?.length ?? 0) : 0}</p>
+              <Link href={c.lien} className="text-muted-foreground after:absolute after:inset-0">{t(c.cle)}</Link>
             </li>
           ))}
         </ul>
       )}
-      {profil.roles.includes('AUTORITE_SIGNATAIRE') && <Alert>{t('monTravail.prochainement')}</Alert>}
 
       <div>
         <h2 className="mb-2 text-sm font-semibold tracking-wider text-muted-foreground uppercase">{t('monTravail.roles')}</h2>

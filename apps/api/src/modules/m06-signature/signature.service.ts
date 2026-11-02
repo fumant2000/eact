@@ -123,7 +123,7 @@ export class SignatureService {
 
         const complet = await tx.acte.findUniqueOrThrow({
           where: { id: acteId },
-          include: { typeActe: true, structure: { include: { parent: true } }, destinataires: { orderBy: { libelle: 'asc' } } },
+          include: { typeActe: true, structure: { include: { parent: true } }, destinataires: { orderBy: { ordre: 'asc' } } },
         });
         // Horloge unique : l'heure vient de la base, pas du poste (§16.4, BF-31).
         const [{ maintenant }] = await tx.$queryRaw<{ maintenant: Date }[]>`SELECT now() AS maintenant`;
@@ -211,7 +211,7 @@ export class SignatureService {
   async genererPdf(acteId: string) {
     const a = await this.prisma.acte.findUniqueOrThrow({
       where: { id: acteId },
-      include: { typeActe: true, structure: { include: { parent: true } }, destinataires: { orderBy: { libelle: 'asc' } }, signataire: true, delegation: true },
+      include: { typeActe: true, structure: { include: { parent: true } }, destinataires: { orderBy: { ordre: 'asc' } }, signataire: true, delegation: true },
     });
     if (!a.reference || !a.signeLe || !a.codeVerification || !a.empreinteSha256 || !a.signataire) throw new ConflictException('Acte non signé');
     const html = htmlActeSigne({

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, NotFoundException, Post, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 import {
@@ -9,7 +9,7 @@ import {
   UtilisateurCourant,
   type UtilisateurConnecte,
 } from '../../common/security/securite';
-import { CodeDto, ConnexionDto, OubliDto, ReinitialisationDto } from './auth.dto';
+import { CodeDto, ConnexionDemoDto, ConnexionDto, OubliDto, ReinitialisationDto } from './auth.dto';
 import { AuthService, type ResultatConnexion } from './auth.service';
 
 // Cookies httpOnly : le JavaScript du navigateur ne lit jamais les jetons (CDC tableau 24).
@@ -77,6 +77,36 @@ export class AuthController {
   @Get('moi')
   moi(@UtilisateurCourant() u: UtilisateurConnecte) {
     return this.auth.profil(u.sub);
+  }
+
+  // ─────────── Mode démonstration (DEMO_MODE=true, jamais en production) ───────────
+
+  private exigerDemo() {
+    if (!AuthService.modeDemo()) throw new NotFoundException();
+  }
+
+  @Public() @Get('demo')
+  async demo() {
+    if (!AuthService.modeDemo()) return { actif: false };
+    return { actif: true, motDePasse: process.env.DEMO_MOT_DE_PASSE ?? 'Minesup@2026', comptes: await this.auth.comptesDemo() };
+  }
+
+  @Public() @Post('demo/connexion') @HttpCode(200)
+  async connexionDemo(@Body() dto: ConnexionDemoDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    this.exigerDemo();
+    return this.repondre(res, await this.auth.connexionDemo(dto.matricule, ip(req)));
+  }
+
+  @Public() @Get('demo/code-mfa')
+  codeDemoMfa(@Req() req: Request) {
+    this.exigerDemo();
+    return this.auth.codeDemoMfa(req.cookies?.[COOKIE_MFA]);
+  }
+
+  @Get('demo/code')
+  codeDemo(@UtilisateurCourant() u: UtilisateurConnecte) {
+    this.exigerDemo();
+    return this.auth.codeDemo(u.sub);
   }
 
   @Public() @Post('mot-de-passe/oubli') @HttpCode(202)

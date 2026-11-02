@@ -1,13 +1,15 @@
 'use client';
 
 // MVVM — Vue D2 « Fiche d'un acte » + cas D8 (visa non proposé). Mobile : colonnes empilées.
-import { ArrowLeft, Building2, Check, CircleDot, Download, Hourglass, Info, Lock, Route, ShieldCheck, Undo2, UserCheck, XCircle } from 'lucide-react';
+import { ArrowLeft, Building2, Check, CircleDot, Download, Hourglass, Info, Lock, PenTool, Route, ShieldCheck, Stamp, Undo2, UserCheck, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { StatutBadge } from '@/components/StatutBadge';
 import { Alert, Button, cx } from '@/components/ui/primitives';
 import { actesApi } from '@/features/actes/model/actes.api';
 import { CodeType, CorpsActe, EnTeteOfficiel, TitreActe } from '@/features/actes/view/Document';
+import { useSignatureViewModel } from '@/features/signature/view-model/useSignatureViewModel';
+import { CarteActeSigne, DialogueSignature, PanneauALaSignature } from '@/features/signature/view/Signature';
 import { useT, type CleTraduction } from '@/i18n';
 import { useFicheActeViewModel, type EtatEtape } from '../view-model/useFicheActeViewModel';
 import { BadgeEcheance, DialogueCorrection, DialogueRejet, DialogueVisa } from './Decisions';
@@ -117,6 +119,15 @@ function MessageNonVisa({ vm }: { vm: VM }) {
       </div>
     ) : null;
   }
+  if (['SIGNE', 'EXECUTOIRE', 'ARCHIVE', 'TRANSMIS', 'RETIRE'].includes(a.statut)) return null;
+  if (a.statut === 'PRET_A_SIGNER') {
+    return (
+      <div className="flex gap-3 rounded-lg border border-[#d8c8f3] bg-[#f0eafb] p-4 text-[#5a32a3]">
+        <PenTool size={18} className="mt-0.5 shrink-0" aria-hidden />
+        <p>{t('signature.nonCompetent', { s: a.circuit?.signature ?? '' })}</p>
+      </div>
+    );
+  }
   const messages: Record<string, ReactNode> = {
     REDACTEUR: t('fiche.redacteur'),
     DEJA_VISE: t('fiche.dejaVise', { d: s.dejaViseLe ? new Date(s.dejaViseLe).toLocaleString(langue === 'FR' ? 'fr-FR' : 'en-GB') : '' }),
@@ -145,6 +156,9 @@ function Info2({ libelle, children }: { libelle: string; children: ReactNode }) 
 export function FicheActe({ id }: { id: string }) {
   const { t, langue } = useT();
   const vm = useFicheActeViewModel(id);
+  const sig = useSignatureViewModel(id);
+  const peutSigner = sig.etat?.signe === false && sig.etat.peutSigner;
+  const signe = sig.etat?.signe ? sig.etat.resultat : null;
   const [onglet, setOnglet] = useState<'circuit' | 'historique'>('circuit');
   if (vm.erreur) return <Alert variant="destructive">{vm.erreur}</Alert>;
   if (!vm.acte || !vm.suivi) return <p className="text-muted-foreground">{t('commun.chargement')}</p>;
@@ -156,7 +170,9 @@ export function FicheActe({ id }: { id: string }) {
   return (
     <div className="space-y-6">
       <nav className="text-sm text-muted-foreground">
-        <Link href="/parapheur" className="inline-flex items-center gap-1 hover:text-foreground"><ArrowLeft size={14} aria-hidden /> {t('fiche.retourParapheur')}</Link>
+        <Link href={peutSigner ? '/signature' : '/parapheur'} className="inline-flex items-center gap-1 hover:text-foreground">
+          <ArrowLeft size={14} aria-hidden /> {peutSigner ? t('signature.titre') : t('fiche.retourParapheur')}
+        </Link>
         <span className="mx-2">/</span>
         {a.type.libelle}
       </nav>
@@ -181,6 +197,10 @@ export function FicheActe({ id }: { id: string }) {
             <span className="reference">{a.reference ?? t('mesActes.refALaSignature')}</span>
           </p>
         </div>
+        {peutSigner && (
+          // Le SEUL bouton or de l'application (charte, ADR 0007)
+          <Button variant="seal" size="lg" onClick={sig.ouvrir}><Stamp size={18} aria-hidden /> {t('signature.signer')}</Button>
+        )}
         {s.peutViser && (
           <div className="flex flex-wrap gap-2">
             <Button variant="outline-destructive" onClick={() => vm.ouvrir('REJET')}><XCircle size={18} aria-hidden /> {t('rejet.bouton')}</Button>
@@ -190,7 +210,13 @@ export function FicheActe({ id }: { id: string }) {
         )}
       </header>
 
-      <MessageNonVisa vm={vm} />
+      {!peutSigner && <MessageNonVisa vm={vm} />}
+      {signe && (
+        <section className="rounded-lg border border-border bg-card p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold"><Stamp size={20} className="text-seal-700" aria-hidden /> {t('signature.signe')}</h2>
+          <CarteActeSigne r={signe} />
+        </section>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
         <div className="space-y-6">
@@ -235,6 +261,7 @@ export function FicheActe({ id }: { id: string }) {
         </div>
 
         <aside className="space-y-6">
+          {peutSigner && <PanneauALaSignature />}
           <section className="rounded-lg border border-border bg-card">
             <div role="tablist" className="flex border-b border-border px-4">
               {(['circuit', 'historique'] as const).map((o) => (
@@ -259,6 +286,7 @@ export function FicheActe({ id }: { id: string }) {
         </aside>
       </div>
 
+      <DialogueSignature vm={sig} objet={a.objet} />
       <DialogueVisa ouvert={vm.dialogue === 'FAVORABLE'} objet={a.objet} etapeSuivante={s.etapeSuivante} onAnnuler={vm.fermer} onConfirmer={vm.viser} enCours={vm.enCours} />
       <DialogueCorrection ouvert={vm.dialogue === 'CORRECTION'} redacteur={s.redacteur.nom} etapesFranchies={vm.etapesFranchies} onAnnuler={vm.fermer} onConfirmer={vm.corriger} enCours={vm.enCours} />
       <DialogueRejet ouvert={vm.dialogue === 'REJET'} onAnnuler={vm.fermer} onConfirmer={vm.rejeter} enCours={vm.enCours} />

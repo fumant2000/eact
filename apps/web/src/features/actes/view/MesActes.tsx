@@ -34,6 +34,13 @@ function SousLigne({ a }: { a: LigneActe }) {
 function BoutonAction({ a }: { a: LigneActe }) {
   const { t } = useT();
   const action = actionDe(a);
+  if (a.reference) {
+    return (
+      <a href={`/api/v1/actes/${a.id}/pdf`} target="_blank" rel="noopener" className={classesBouton({ variant: 'outline', size: 'sm' })}>
+        {t('mesActes.telecharger')}
+      </a>
+    );
+  }
   return (
     <Link
       href={action === 'reprendre' || action === 'corriger' ? `/actes/${a.id}/edition` : `/actes/${a.id}`}
