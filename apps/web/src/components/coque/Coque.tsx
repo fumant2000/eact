@@ -10,7 +10,9 @@ import {
   Inbox,
   LogOut,
   Menu,
+  FileCode2,
   Network,
+  Workflow,
   PenTool,
   Plus,
   ScrollText,
@@ -61,7 +63,11 @@ const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
   {
     cle: 'menu.administration',
     // J1–J8 (organigramme, utilisateurs, types, circuits, gabarits) : itération suivante.
-    entrees: [{ href: '/admin', cle: 'menu.administration', icone: Network, roles: ['ADMINISTRATEUR'], bientot: true }],
+    entrees: [
+      { href: '/admin/utilisateurs', cle: 'admin.utilisateurs', icone: Network, roles: ['ADMINISTRATEUR'] },
+      { href: '/admin/circuits', cle: 'admin.circuits', icone: Workflow, roles: ['ADMINISTRATEUR'] },
+      { href: '/admin/gabarits', cle: 'admin.gabarits', icone: FileCode2, roles: ['ADMINISTRATEUR'] },
+    ],
   },
 ];
 
