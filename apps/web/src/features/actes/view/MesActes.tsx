@@ -35,7 +35,10 @@ function BoutonAction({ a }: { a: LigneActe }) {
   const { t } = useT();
   const action = actionDe(a);
   return (
-    <Link href={`/actes/${a.id}/edition`} className={classesBouton({ variant: action === 'corriger' ? 'default' : 'outline', size: 'sm' })}>
+    <Link
+      href={action === 'reprendre' || action === 'corriger' ? `/actes/${a.id}/edition` : `/actes/${a.id}`}
+      className={classesBouton({ variant: action === 'corriger' ? 'default' : 'outline', size: 'sm' })}
+    >
       {t(LIBELLES_ACTION[action])}
     </Link>
   );

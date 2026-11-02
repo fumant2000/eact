@@ -58,6 +58,11 @@ export class ActesController {
     return this.actes.detail(id, u);
   }
 
+  @Get('actes/:id/suivi')
+  suivi(@Param('id', Uuid) id: string, @UtilisateurCourant() u: UtilisateurConnecte) {
+    return this.actes.suivi(id, u);
+  }
+
   @Patch('actes/:id')
   modifier(@Param('id', Uuid) id: string, @Body() dto: ModifierActeDto, @UtilisateurCourant() u: UtilisateurConnecte) {
     return this.actes.modifier(id, dto, u);

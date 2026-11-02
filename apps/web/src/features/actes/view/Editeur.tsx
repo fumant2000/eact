@@ -1,14 +1,16 @@
 'use client';
 
 // MVVM — Vue de l'éditeur d'acte : C4 (bureau et mobile), C5 pièces, C6 contrôle, C7 soumission, C10 suppression.
-import { AlertCircle, ArrowLeft, Check, Download, Eye, History, Loader2, Send, ShieldAlert, ShieldCheck, Trash2, Upload, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, Download, Eye, History, Loader2, Send, ShieldAlert, ShieldCheck, Trash2, Undo2, Upload, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRef, useState, type ReactNode } from 'react';
 import { StatutBadge } from '@/components/StatutBadge';
 import { Dialogue } from '@/components/ui/Dialogue';
 import { Alert, Button, cx, Label } from '@/components/ui/primitives';
+import { parapheurApi } from '@/features/parapheur/model/parapheur.api';
 import { useT, type CleTraduction } from '@/i18n';
-import { actesApi, type Acte, type Brouillon, type Niveau, type Piece } from '../model/actes.api';
+import { actesApi, champsManquantsLocaux, type Acte, type Brouillon, type Niveau, type Piece } from '../model/actes.api';
 import { useEditeurViewModel, type EnvoiLocal } from '../view-model/useEditeurViewModel';
 import { CodeType, CorpsActe, EnTeteOfficiel, TitreActe } from './Document';
 import { BarreOutils, useEditeurRiche, ZoneTexte } from './EditeurTexte';
@@ -194,7 +196,6 @@ function Pieces({ vm, acte, lecture }: { vm: VM; acte: Acte; lecture: boolean })
 // ─────────── Panneaux latéraux ───────────
 function Informations({ b, acte, modifier }: { b: Brouillon; acte: Acte; modifier: (c: Partial<Brouillon>) => void }) {
   const { t } = useT();
-  const objetManquant = acte.champsManquants.includes('objet') && !b.objet.trim();
   return (
     <Carte titre={t('editeur.informations')}>
       <div className="space-y-5">
@@ -206,9 +207,8 @@ function Informations({ b, acte, modifier }: { b: Brouillon; acte: Acte; modifie
             maxLength={300}
             value={b.objet}
             onChange={(e) => modifier({ objet: e.target.value })}
-            aria-invalid={objetManquant || undefined}
             aria-describedby="aide-objet"
-            className={cx('w-full rounded-md border bg-card p-3 text-base sm:text-sm', objetManquant ? 'border-destructive' : 'border-input')}
+            className="w-full rounded-md border border-input bg-card p-3 text-base sm:text-sm"
           />
           <p id="aide-objet" className="text-xs text-muted-foreground">{t('editeur.objetAide')}</p>
         </div>
@@ -291,14 +291,77 @@ export function Editeur({ id }: { id: string }) {
   return <EditeurCharge key={vm.generation} vm={vm} acte={vm.acte} b={vm.brouillon} />;
 }
 
-const LIBELLES_CHAMPS: Record<string, CleTraduction> = { objet: 'champ.objet', contenu: 'champ.contenu', ampliation: 'champ.ampliation' };
+/** C9 : motif de la correction demandée, visible tant que l'acte est à corriger. */
+function BandeauCorrection({ id }: { id: string }) {
+  const { t, langue } = useT();
+  const { data } = useQuery({ queryKey: ['suivi', id], queryFn: () => parapheurApi.suivi(id) });
+  const r = data?.dernierRenvoi;
+  if (!r) return null;
+  return (
+    <div className="flex gap-3 rounded-lg border border-[#f6d3ae] bg-[#fef3e7] p-4 text-[#9a4507]">
+      <Undo2 size={18} className="mt-0.5 shrink-0" aria-hidden />
+      <div>
+        <p className="font-semibold">{t('c9.titre', { nom: r.viseur, d: new Date(r.le).toLocaleString(langue === 'FR' ? 'fr-FR' : 'en-GB', { dateStyle: 'short', timeStyle: 'short' }) })}</p>
+        <p>« {r.observation} »</p>
+        <p className="text-sm">{t('c9.retour')}</p>
+      </div>
+    </div>
+  );
+}
+
+/** RG-03 : où se trouve chaque champ exigé, et où l'y conduire (id de l'élément à mettre au point). */
+const CHAMPS: Record<string, { libelle: CleTraduction; ou: CleTraduction; cible: string }> = {
+  objet: { libelle: 'aCompleter.objet', ou: 'aCompleter.objetOu', cible: 'champ-objet-document' },
+  contenu: { libelle: 'aCompleter.contenu', ou: 'aCompleter.contenuOu', cible: 'champ-contenu' },
+  ampliation: { libelle: 'aCompleter.ampliation', ou: 'aCompleter.ampliationOu', cible: 'champ-ampliation' },
+};
+
+function allerAuChamp(champ: string) {
+  const el = document.getElementById(CHAMPS[champ]?.cible ?? '');
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el?.focus();
+}
+
+/** Liste visible en permanence : ce qui est exigé, coché en direct (réponse à « qu'est-ce qui est requis ? »). */
+function ACompleter({ exiges, restants }: { exiges: string[]; restants: string[] }) {
+  const { t } = useT();
+  return (
+    <Carte titre={t('aCompleter.titre')}>
+      <p className="mb-3 text-sm text-muted-foreground">{t('aCompleter.auto')}</p>
+      <ul className="space-y-2">
+        {exiges.map((c) => {
+          const fait = !restants.includes(c);
+          return (
+            <li key={c} className="flex items-start gap-2">
+              {fait ? <Check size={18} className="mt-0.5 shrink-0 text-success" aria-hidden /> : <AlertCircle size={18} className="mt-0.5 shrink-0 text-warning" aria-hidden />}
+              <span className="flex-1">
+                <span className={cx('block', fait ? 'text-success' : 'font-medium')}>
+                  {t(CHAMPS[c]?.libelle ?? 'aCompleter.objet')}
+                  <span className="sr-only">{fait ? ' (fait)' : ' (à faire)'}</span>
+                </span>
+                {!fait && (
+                  <button type="button" onClick={() => allerAuChamp(c)} className="text-left text-sm text-primary underline underline-offset-4">
+                    {t(CHAMPS[c]?.ou ?? 'aCompleter.objetOu')}
+                  </button>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {restants.length === 0 && <p className="mt-3 text-sm font-medium text-success">{t('aCompleter.pret')}</p>}
+    </Carte>
+  );
+}
 
 function EditeurCharge({ vm, acte, b }: { vm: VM; acte: Acte; b: Brouillon }) {
   const { t } = useT();
   const lecture = !acte.modifiable;
   const editor = useEditeurRiche(b.contenu, (contenu) => vm.modifier({ contenu }), t('editeur.texte'));
   const structure = acte.structuresPossibles.find((s) => s.id === b.structureId) ?? acte.structure;
-  const manque = (c: string) => vm.manquants.includes(c);
+  // Recalculé à chaque frappe : la liste « À compléter » et les champs en rouge suivent la saisie.
+  const restants = champsManquantsLocaux(acte.champsObligatoires, b);
+  const manque = (c: string) => vm.manquants.includes(c) && restants.includes(c);
 
   return (
     <div className="space-y-6">
@@ -333,14 +396,18 @@ function EditeurCharge({ vm, acte, b }: { vm: VM; acte: Acte; b: Brouillon }) {
         </Alert>
       )}
       {lecture && <Alert>{t('editeur.lectureSeule')}</Alert>}
+      {acte.statut === 'A_CORRIGER' && <BandeauCorrection id={acte.id} />}
       {vm.erreurAction && <Alert variant="destructive">{vm.erreurAction}</Alert>}
-      {vm.manquants.length > 0 && (
+      {vm.manquants.length > 0 && restants.length > 0 && (
         <Alert variant="destructive">
-          <strong>{t('soumission.impossible', { n: vm.manquants.length })}</strong>
+          <strong>{t('soumission.completez')}</strong>
           <ul className="mt-1 list-disc pl-5">
-            {vm.manquants.map((c) => (
+            {restants.map((c) => (
               <li key={c}>
-                <a href={`#champ-${c}`} className="underline" onClick={() => document.getElementById(`champ-${c}`)?.focus()}>{t(LIBELLES_CHAMPS[c] ?? 'champ.objet')}</a>
+                <button type="button" className="text-left underline" onClick={() => allerAuChamp(c)}>
+                  {t(CHAMPS[c]?.libelle ?? 'aCompleter.objet')}
+                </button>{' '}
+                — {t(CHAMPS[c]?.ou ?? 'aCompleter.objetOu')}
               </li>
             ))}
           </ul>
@@ -357,7 +424,26 @@ function EditeurCharge({ vm, acte, b }: { vm: VM; acte: Acte; b: Brouillon }) {
             <TitreActe
               code={acte.type.code}
               numero={acte.reference ?? <span className="reference rounded bg-primary-50 px-2 py-0.5 text-sm font-normal text-primary-700">{t('editeur.numero')}</span>}
-              objet={<span className="inline-block rounded border border-border px-3 py-1">{b.objet || '…'}</span>}
+              objet={
+                lecture ? (
+                  b.objet
+                ) : (
+                  // L'objet se saisit là où il s'affiche (il reste aussi dans le panneau « Informations »).
+                  <input
+                    id="champ-objet-document"
+                    value={b.objet}
+                    maxLength={300}
+                    onChange={(e) => vm.modifier({ objet: e.target.value })}
+                    placeholder={t('editeur.objetPlaceholder')}
+                    aria-label={t('editeur.objet')}
+                    aria-invalid={manque('objet') || undefined}
+                    className={cx(
+                      'w-full max-w-xl rounded border bg-transparent px-3 py-1 text-center italic placeholder:text-muted-foreground',
+                      manque('objet') ? 'border-destructive ring-2 ring-destructive' : 'border-dashed border-primary-300 hover:border-primary',
+                    )}
+                  />
+                )
+              }
             />
             {lecture ? <CorpsActe html={b.contenu} /> : <ZoneTexte editor={editor} invalide={manque('contenu')} />}
             <div className="grid gap-6 sm:grid-cols-2">
@@ -375,6 +461,7 @@ function EditeurCharge({ vm, acte, b }: { vm: VM; acte: Acte; b: Brouillon }) {
 
         {/* Panneau latéral */}
         <aside className="space-y-6">
+          {!lecture && <ACompleter exiges={acte.champsObligatoires} restants={restants} />}
           {lecture ? null : <Informations b={b} acte={acte} modifier={vm.modifier} />}
           <Pieces vm={vm} acte={acte} lecture={lecture} />
           <CircuitPrevu acte={acte} />

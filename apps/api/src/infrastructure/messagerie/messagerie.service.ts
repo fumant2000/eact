@@ -17,9 +17,10 @@ export interface Courriel {
 export class MessagerieService {
   private readonly logger = new Logger(MessagerieService.name);
   private readonly transport: Transporter = createTransport({
-    host: process.env.SMTP_HOST ?? 'localhost',
+    host: process.env.SMTP_HOST ?? '127.0.0.1', // pas « localhost » : sous Windows, l'essai IPv6 coûte ~1 s par envoi
     port: Number(process.env.SMTP_PORT ?? 1025),
     secure: false,
+    pool: true, // une connexion réutilisée pour les envois successifs
   });
 
   async envoyer(c: Courriel): Promise<void> {

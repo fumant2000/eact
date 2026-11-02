@@ -75,6 +75,7 @@ export interface Acte {
   pieces: Piece[];
   circuit: { etapes: { id: string; ordre: number; libelle: string; delaiHeures: number }[]; signature: string } | null;
   etapeCourante: { ordre: number; libelle: string } | null;
+  champsObligatoires: string[];
   champsManquants: string[];
   modifiable: boolean;
   supprimable: boolean;
@@ -119,6 +120,14 @@ export const actesApi = {
     });
   },
 };
+
+/** RG-03 côté poste : même règle que le serveur, recalculée à chaque frappe pour la liste « À compléter ». */
+export function champsManquantsLocaux(exiges: string[], b: Pick<Brouillon, 'objet' | 'contenu' | 'ampliations'>): string[] {
+  const texte = b.contenu.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+  return exiges.filter(
+    (c) => (c === 'objet' && !b.objet.trim()) || (c === 'contenu' && !texte) || (c === 'ampliation' && b.ampliations.length === 0),
+  );
+}
 
 export const EXTENSIONS_ACCEPTEES = ['pdf', 'docx', 'jpg', 'jpeg', 'png'];
 export const TAILLE_MAX = 20 * 1024 * 1024; // BF-18

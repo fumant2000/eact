@@ -177,9 +177,10 @@ export class ActesService {
    */
   private async verifierLecture(acte: ActeComplet, u: UtilisateurConnecte) {
     if (acte.redacteurId === u.sub) return;
-    const aVise = await this.prisma.visa.count({ where: { acteId: acte.id, viseurId: u.sub } });
+    // Membres du circuit : ceux qui ont visé et ceux à qui revient l'étape courante (RG-04, RG-15).
+    if (await this.circuits.estMembreDuCircuit(acte.id, u)) return;
     const autorite = u.roles.some((r) => r === Role.SECRETAIRE_GENERAL || r === Role.AUTORITE_SIGNATAIRE);
-    if (aVise || (autorite && acte.confidentialite !== 'CONFIDENTIEL')) return;
+    if (autorite && acte.confidentialite !== 'CONFIDENTIEL') return;
     throw new ForbiddenException({ code: 'ACCES_REFUSE', message: "Vous n'avez pas accès à cet acte" });
   }
 
@@ -196,6 +197,12 @@ export class ActesService {
         (champ === 'contenu' && !texteBrut(acte.contenu)) ||
         (champ === 'ampliation' && acte.destinataires.length === 0),
     );
+  }
+
+  /** BF-28 : position, frise des visas, droits de l'agent sur l'étape courante (fiche D2, C9). */
+  async suivi(id: string, u: UtilisateurConnecte) {
+    await this.verifierLecture(await this.charger(id), u);
+    return this.circuits.suivi(id, u);
   }
 
   async detail(id: string, u: UtilisateurConnecte) {
@@ -241,6 +248,7 @@ export class ActesService {
         signature: await this.circuits.signatairePrevu(acte.typeActe.code),
       },
       etapeCourante: acte.etapeCourante && { ordre: acte.etapeCourante.ordre, libelle: acte.etapeCourante.libelle },
+      champsObligatoires: (acte.typeActe.champsObligatoires as string[]) ?? [], // RG-03, affichés à l'avance
       champsManquants: this.champsManquants(acte),
       modifiable,
       supprimable: modifiable && acte.statut === StatutActe.BROUILLON && acte.versions.length === 0,

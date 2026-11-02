@@ -19,12 +19,14 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { SelecteurLangue } from '@/components/SelecteurLangue';
 import { Button, classesBouton } from '@/components/ui/primitives';
 import { useSession } from '@/features/auth/view-model/useSession';
+import { parapheurApi } from '@/features/parapheur/model/parapheur.api';
 import { useT, type CleTraduction } from '@/i18n';
 
 interface EntreeMenu {
@@ -33,6 +35,7 @@ interface EntreeMenu {
   icone: LucideIcon;
   roles?: string[]; // absent = tout utilisateur interne
   bientot?: boolean; // hors P0 : entrée grisée (brief design)
+  compteur?: 'parapheur';
 }
 
 const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
@@ -40,7 +43,7 @@ const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
     cle: 'menu.travail',
     entrees: [
       { href: '/mon-travail', cle: 'menu.monTravail', icone: Home },
-      { href: '/parapheur', cle: 'menu.parapheur', icone: Inbox, roles: ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'], bientot: true },
+      { href: '/parapheur', cle: 'menu.parapheur', icone: Inbox, roles: ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'], compteur: 'parapheur' },
       { href: '/signature', cle: 'menu.signature', icone: PenTool, roles: ['AUTORITE_SIGNATAIRE'], bientot: true },
       { href: '/mes-actes', cle: 'menu.mesActes', icone: Files, roles: ['REDACTEUR'] },
       { href: '/delegations', cle: 'menu.delegations', icone: UserCog, roles: ['AUTORITE_SIGNATAIRE', 'SECRETAIRE_GENERAL', 'ADMINISTRATEUR'], bientot: true },
@@ -61,9 +64,17 @@ const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
   },
 ];
 
+const ROLES_VISEURS = ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'];
+
 function BarreLaterale({ roles, onNaviguer }: { roles: string[]; onNaviguer?: () => void }) {
   const { t } = useT();
   const chemin = usePathname();
+  const parapheur = useQuery({
+    queryKey: ['parapheur'],
+    queryFn: parapheurApi.lister,
+    enabled: roles.some((r) => ROLES_VISEURS.includes(r)),
+    refetchInterval: 60_000,
+  });
   return (
     <nav className="flex h-full flex-col gap-6 p-4" aria-label="Navigation principale">
       {roles.includes('REDACTEUR') && (
@@ -85,6 +96,9 @@ function BarreLaterale({ roles, onNaviguer }: { roles: string[]; onNaviguer?: ()
                     <e.icone size={18} aria-hidden />
                     <span className="flex-1">{t(e.cle)}</span>
                     {e.bientot && <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{t('menu.bientot')}</span>}
+                    {e.compteur && !!parapheur.data?.aViser.length && (
+                      <span className="rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground" aria-label={`${parapheur.data.aViser.length}`}>{parapheur.data.aViser.length}</span>
+                    )}
                   </>
                 );
                 return (
