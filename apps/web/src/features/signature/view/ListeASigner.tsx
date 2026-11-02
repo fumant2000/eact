@@ -1,7 +1,6 @@
 'use client';
 
-// MVVM — Vue E1 « À signer ». Le signataire ne signe pas depuis la liste : « Examiner » ouvre la fiche,
-// où se trouve le seul bouton or de l'application (guide §5, point 2).
+// MVVM — Vue « À signer » (UC-09) : on ne signe pas depuis la liste, « Examiner » ouvre la fiche.
 import { useQuery } from '@tanstack/react-query';
 import { Lock, PenTool } from 'lucide-react';
 import Link from 'next/link';

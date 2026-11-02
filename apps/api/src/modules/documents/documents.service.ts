@@ -14,11 +14,7 @@ import {
   type Filtre,
 } from './pipeline';
 
-/**
- * IDocuments — chaîne de traitement des pièces (CDC §13.1, figure 6).
- * Mode léger : exécutée dans le processus de l'API, après la réponse 202.
- * Mode complet : le même pipeline sera consommé par le worker depuis la file BullMQ « documents ».
- */
+/** IDocuments : traitement des pièces, exécuté dans l'API après la réponse 202 (BF-18, RG-24). */
 @Injectable()
 export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
@@ -38,11 +34,6 @@ export class DocumentsService {
       new FiltreEmpreinte(),
       new FiltreDesactive('Indexation plein texte — M08'),
     ];
-  }
-
-  /** Liste lisible des filtres, pour la démonstration et la documentation de l'API. */
-  decrire() {
-    return this.filtres.map((f, i) => ({ ordre: i + 1, nom: f.nom, actif: f.actif }));
   }
 
   /** Traite une pièce déjà enregistrée en EN_ATTENTE ; ne lève jamais (l'état final est en base). */

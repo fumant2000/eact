@@ -1,5 +1,4 @@
-// Primitives d'interface, API calquée sur shadcn/ui (guide d'implémentation §3) pour pouvoir
-// les remplacer par les composants shadcn sans toucher aux écrans.
+// Primitives d'interface à l'API calquée sur shadcn/ui, remplaçables sans toucher aux écrans.
 import { AlertCircle, CheckCircle2, Info, TriangleAlert } from 'lucide-react';
 import type { ButtonHTMLAttributes, InputHTMLAttributes, LabelHTMLAttributes, ReactNode } from 'react';
 
@@ -11,7 +10,7 @@ const VARIANTES = {
   ghost: 'text-foreground hover:bg-accent',
   destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
   'outline-destructive': 'border border-destructive bg-card text-destructive hover:bg-destructive/10',
-  // Seul bouton or de l'application : « Signer » (E2, E3)
+  // Seul bouton or de l'application : « Signer » (ADR 0007)
   seal: 'bg-seal-400 text-seal-foreground hover:brightness-95',
   link: 'text-primary underline underline-offset-4 hover:text-primary-800 px-0 h-auto',
 } as const;

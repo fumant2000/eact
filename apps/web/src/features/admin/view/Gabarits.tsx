@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue J6 « Modèles et gabarits GitHub » : BF-59, RG-23.
+// MVVM — Vue « Modèles et gabarits GitHub » (BF-59, RG-23).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { Alert, Button } from '@/components/ui/primitives';

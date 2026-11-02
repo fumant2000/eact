@@ -1,8 +1,7 @@
 'use client';
 
-// MVVM — Vue-Modèle de l'éditeur d'acte (C4 → C10).
-// Enregistrement automatique (BF-17) : chaque saisie est envoyée 1 s après la dernière frappe, une requête à la fois,
-// avec la version lue (verrou optimiste §14.2). Les pièces suivent le pipeline côté serveur (C5).
+// MVVM — Vue-Modèle de l'éditeur d'acte (BF-17, BF-18).
+// Enregistrement auto 1 s après la dernière frappe, une requête à la fois, avec la version lue (verrou optimiste).
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -125,7 +124,7 @@ export function useEditeurViewModel(id: string) {
     setGeneration((g) => g + 1);
   };
 
-  // ─────────── Pièces jointes (C5) ───────────
+  // ─────────── Pièces jointes (BF-18) ───────────
   const [envois, setEnvois] = useState<EnvoiLocal[]>([]);
   const majEnvoi = (cle: string, maj: Partial<EnvoiLocal>) => setEnvois((l) => l.map((e) => (e.cle === cle ? { ...e, ...maj } : e)));
 
@@ -133,7 +132,7 @@ export function useEditeurViewModel(id: string) {
     for (const f of Array.from(fichiers)) {
       const cle = `${f.name}-${f.size}-${Date.now()}-${Math.random()}`;
       const extension = f.name.split('.').pop()?.toLowerCase() ?? '';
-      // Contrôle immédiat côté poste ; le serveur refait le contrôle sur le contenu (filtre 1).
+      // Contrôle immédiat côté poste ; le serveur revérifie le contenu.
       const refus: EnvoiLocal['refus'] =
         f.size > TAILLE_MAX ? { motif: 'tropGros', mo: Math.ceil(f.size / 1024 / 1024) } : !EXTENSIONS_ACCEPTEES.includes(extension) ? { motif: 'format' } : undefined;
       setEnvois((l) => [...l, { cle, nomFichier: f.name, progression: 0, refus }]);
@@ -161,7 +160,7 @@ export function useEditeurViewModel(id: string) {
     await client.invalidateQueries({ queryKey: ['acte', id] });
   };
 
-  // ─────────── Soumission (C6, C7) et suppression (C10) ───────────
+  // ─────────── Soumission (RG-03, RG-07) et suppression (RG-16) ───────────
   const [manquants, setManquants] = useState<string[]>([]);
   const [confirmation, setConfirmation] = useState<'soumettre' | 'supprimer' | null>(null);
   const [erreurAction, setErreurAction] = useState<string | null>(null);
@@ -218,7 +217,7 @@ export function useEditeurViewModel(id: string) {
         await client.invalidateQueries({ queryKey: ['mes-actes'] });
         router.push('/mes-actes?soumis=1');
       }),
-    /** R-06 : on enregistre d'abord, pour que l'aperçu montre la dernière saisie. */
+    /** Aperçu A4 : on enregistre d'abord pour qu'il montre la dernière saisie. */
     ouvrirApercu: async () => {
       const onglet = window.open('', '_blank'); // ouvert dans le clic, sinon bloqué comme fenêtre surgissante
       await vider();

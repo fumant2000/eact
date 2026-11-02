@@ -5,10 +5,7 @@ import { MessagerieService } from './messagerie/messagerie.service';
 import { ConvertisseurPdf } from './pdf/convertisseur-pdf';
 import { Stockage, StockageLocal, StockageS3 } from './stockage/stockage';
 
-/**
- * Adaptateurs techniques partagés (interfaces requises, CDC tableau 18).
- * Le métier injecte la classe abstraite ; la variable d'environnement choisit l'implémentation.
- */
+/** Adaptateurs techniques (CDC tableau 18) : le métier injecte la classe abstraite, l'environnement choisit l'implémentation. */
 @Global()
 @Module({
   providers: [

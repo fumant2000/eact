@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vues J4 (types d'actes) et J5 (éditeur de circuits) : BF-64, BF-65, ENF-08.
+// MVVM — Vues des types d'actes et des circuits (BF-64, BF-65, ENF-08).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -121,7 +121,7 @@ function CarteType({ ty, structures, executer }: { ty: TypeAdmin; structures: { 
         </section>
       ))}
 
-      {/* Tout type peut recevoir un circuit, y compris le projet de décret (visas internes, ADR 0008). */}
+      {/* Tout type peut recevoir un circuit, projet de décret compris (ADR 0008). */}
       {sansCircuit.length > 0 && (
           <details className="rounded-md border border-dashed border-primary-300 p-4">
             <summary className="cursor-pointer text-sm font-medium text-primary">{t('admin.nouveauCircuit')}</summary>

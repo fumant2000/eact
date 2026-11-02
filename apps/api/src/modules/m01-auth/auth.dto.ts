@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
-/** Politique de mot de passe (maquette B5, ENF-06). */
-export const POLITIQUE_MOT_DE_PASSE = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/;
+/** Politique de mot de passe (ENF-06). */
+const POLITIQUE_MOT_DE_PASSE = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/;
 
 export class ConnexionDto {
   @ApiProperty({ example: 'MINESUP-04812', description: 'Matricule ou adresse e-mail (BF-01)' })

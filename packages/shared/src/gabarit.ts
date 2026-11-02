@@ -1,16 +1,7 @@
 /**
- * Format d'un gabarit d'acte (dépôt eact-gabarits, CDC §19.1) : HTML précédé d'un commentaire de métadonnées.
- *
- *   <!--
- *   type: NS
- *   libelle: Note de service · standard DAG
- *   version: 2.3
- *   description: Préambule libre, articles numérotés, ampliation interne.
- *   ampliations: SG | Toutes directions | Archives / Chrono
- *   -->
- *   <p>Corps de l'acte…</p>
- *
- * Seul le corps est un gabarit : l'en-tête officiel, le titre et la signature sont produits par EACT (BF-16).
+ * Gabarit d'acte (exemples : gabarits/fr/*.html) : HTML précédé d'un commentaire `<!-- clé: valeur -->`
+ * (type et libelle obligatoires ; ampliations séparées par « | »).
+ * Seul le corps vient du gabarit : en-tête officiel, titre et signature sont produits par EACT (BF-16).
  */
 export interface Gabarit {
   type: string;

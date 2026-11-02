@@ -31,7 +31,6 @@ export function useSession() {
     [client, router],
   );
 
-  // Non connecté : retour à la page de connexion.
   useEffect(() => {
     if (error instanceof ErreurApi && error.status === 401) router.replace('/connexion');
   }, [error, router]);

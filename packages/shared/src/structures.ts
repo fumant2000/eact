@@ -1,7 +1,4 @@
-/**
- * Libellés officiels bilingues des structures pour l'en-tête des actes (CT-01, annexe A).
- * Partagés par l'éditeur (aperçu) et la génération du PDF/A. À confirmer sur des actes réels.
- */
+/** Libellés bilingues des structures pour l'en-tête des actes (CT-01), communs à l'aperçu et au PDF/A ; à confirmer sur des actes réels. */
 export const LIBELLES_STRUCTURES: Record<string, { fr: string; en: string }> = {
   CAB: { fr: 'CABINET DU MINISTRE', en: "MINISTER'S OFFICE" },
   SG: { fr: 'SECRÉTARIAT GÉNÉRAL', en: 'SECRETARIAT GENERAL' },

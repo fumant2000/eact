@@ -1,6 +1,6 @@
 import { AdminUtilisateurs } from '@/features/admin/view/Utilisateurs';
 
-// J1–J3 · /admin/utilisateurs
+// Organigramme, comptes et rôles (BF-06 à BF-08).
 export default function Page() {
   return <AdminUtilisateurs />;
 }

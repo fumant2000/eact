@@ -1,6 +1,6 @@
 'use client';
 
-// S-02 « Mon travail » : page d'arrivée. Les compteurs seront alimentés par le parapheur (It. 2).
+// « Mon travail » : page d'arrivée, compteurs selon les rôles de l'agent.
 import { FilePen, Inbox, PenTool, Undo2, UserCog } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';

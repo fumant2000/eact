@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue-Modèle de la fiche d'un acte (D2) : document, frise du circuit, décisions D3 à D5.
+// MVVM — Vue-Modèle de la fiche d'un acte : document, frise du circuit, décisions (BF-24 à BF-26, BF-28).
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -50,7 +50,7 @@ export function useFicheActeViewModel(id: string) {
       router.push('/parapheur');
     } catch (e) {
       notifierErreur(e);
-      // D7 : l'acte a changé entre-temps → on recharge la fiche.
+      // 409 : l'acte a changé entre-temps, on recharge la fiche.
       if (e instanceof ErreurApi && e.status === 409) {
         setDialogue(null);
         await Promise.all([acte.refetch(), suivi.refetch()]);

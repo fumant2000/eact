@@ -1,7 +1,4 @@
-/**
- * Événements du bus interne (invocation implicite, CDC §11).
- * Producteurs : modules métier. Consommateurs : audit, notifications, relances, diffusion.
- */
+/** Événements du bus interne (invocation implicite) : émis par les modules métier, écoutés par l'audit et les notifications. */
 export const EVENEMENTS = {
   ACTE_CREE: 'acte.cree',
   ACTE_SUPPRIME: 'acte.supprime',

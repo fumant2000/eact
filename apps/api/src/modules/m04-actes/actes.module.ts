@@ -6,11 +6,7 @@ import { AuditModule } from '../m10-audit/audit.module';
 import { ActesController } from './actes.controller';
 import { ActesService } from './actes.service';
 
-/**
- * M04 — Rédaction et modèles d'actes
- * Exigences : BF-15 à BF-22 · Priorité : P0
- * Interface fournie : IActes · Interfaces requises : IParapheur (circuit), IDocuments, IStockage, IAudit
- */
+/** M04 Rédaction et modèles d'actes — BF-15 à BF-22. */
 @Module({
   imports: [CircuitModule, DocumentsModule, AuditModule, GithubModule],
   controllers: [ActesController],

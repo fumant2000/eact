@@ -1,15 +1,11 @@
-/**
- * Cycle de vie d'un acte (CDC §14.1, figure 7).
- * Source unique des transitions : le serveur refuse toute transition absente d'ici,
- * le frontend s'en sert pour n'afficher que les actions possibles.
- */
+/** Cycle de vie d'un acte : source unique des transitions, appliquée par l'API et lue par le web pour n'afficher que les actions possibles. */
 export enum StatutActe {
   BROUILLON = 'BROUILLON',
   EN_CIRCUIT = 'EN_CIRCUIT',
   A_CORRIGER = 'A_CORRIGER',
   REJETE = 'REJETE',
   PRET_A_SIGNER = 'PRET_A_SIGNER',
-  /** Projet de décret transmis à la Présidence ou aux services du Premier Ministre (BF-37). */
+  /** Projet de décret transmis à la Présidence ou au Premier Ministre (BF-37). */
   TRANSMIS = 'TRANSMIS',
   SIGNE = 'SIGNE',
   EXECUTOIRE = 'EXECUTOIRE',
@@ -59,7 +55,7 @@ export function actionsPossibles(statut: ValeurStatut): ActionActe[] {
   return (Object.keys(TRANSITIONS) as ActionActe[]).filter((a) => peutAppliquer(a, statut));
 }
 
-/** RG-10 / RG-14 : plus aucune modification de contenu à partir de la signature (ou de la transmission d'un décret). */
+/** RG-10 / RG-14 : contenu figé dès la signature (ou la transmission d'un décret). */
 export function estImmuable(statut: ValeurStatut): boolean {
   return [S.TRANSMIS, S.SIGNE, S.EXECUTOIRE, S.ARCHIVE, S.RETIRE].includes(statut as StatutActe);
 }

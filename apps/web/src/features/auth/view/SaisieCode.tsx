@@ -1,6 +1,6 @@
 'use client';
 
-// Code à 6 chiffres en deux groupes de 3 (InputOTP du guide) ; collage accepté, police mono 22 px.
+// Code TOTP à 6 chiffres en deux groupes de 3, collage accepté (BF-02).
 import { useRef } from 'react';
 
 export function SaisieCode({

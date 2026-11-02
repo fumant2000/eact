@@ -7,10 +7,7 @@ export abstract class Antivirus {
   abstract analyser(contenu: Buffer): Promise<ResultatAnalyse>;
 }
 
-/**
- * Mode léger : refuse le fichier de test standard EICAR, accepte le reste.
- * Permet de montrer en séance le blocage d'une pièce (C5 « Bloqué : menace détectée ») sans ClamAV.
- */
+/** Mode léger : refuse le fichier de test EICAR, accepte le reste. */
 export class AntivirusSimule extends Antivirus {
   private static readonly EICAR = 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*';
 
@@ -30,7 +27,7 @@ export class AntivirusClamav extends Antivirus {
       socket.on('data', (d) => (reponse += d.toString()));
       socket.on('error', rejeter);
       socket.on('close', () => {
-        // « stream: OK » ou « stream: Eicar-Test-Signature FOUND »
+        // Réponse clamd : « stream: OK » ou « stream: <menace> FOUND »
         const r = reponse.replace(/\0/g, '').trim();
         if (r.endsWith('OK')) resoudre({ sain: true });
         else if (r.endsWith('FOUND')) resoudre({ sain: false, menace: r.replace(/^stream:\s*/, '').replace(/\s*FOUND$/, '') });

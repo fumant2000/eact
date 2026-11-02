@@ -1,7 +1,6 @@
 'use client';
 
-// MVVM — Vue-Modèle du parapheur (D1) : filtres, et visa en 3 clics (Viser → Confirmer → toast « Annuler »).
-// Le visa part 5 s après la confirmation ; « Annuler » l'abandonne (guide §5, point 1).
+// MVVM — Vue-Modèle du parapheur (BF-23) : filtres et visa différé de 5 s, annulable depuis le toast.
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';

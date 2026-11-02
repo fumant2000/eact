@@ -1,9 +1,4 @@
-/**
- * Référence administrative (CDC §1.4) :
- *   N° {année sur 2 chiffres}/{séquence sur 4 chiffres}/{code type}/MINESUP/{chaîne de structures}
- *   ex. N° 26/0042/NS/MINESUP/SG/DAG
- * Format exact à confirmer sur des actes réels anonymisés.
- */
+/** Référence administrative, ex. N° 26/0042/NS/MINESUP/SG/DAG (format à confirmer sur des actes réels). */
 export function formaterReference(p: {
   sequence: number;
   codeType: string;
@@ -15,14 +10,11 @@ export function formaterReference(p: {
   return `N° ${aa}/${seq}/${p.codeType}/MINESUP/${p.chaineStructures.join('/')}`;
 }
 
-/** Codes des types d'actes (annexe B). AC (arrêté conjoint) est réservé à la V2 (EV-06). */
+/** Codes des types d'actes ; AC (arrêté conjoint) est réservé à la V2 (EV-06). */
 export const CODES_TYPES_ACTES = ['DEC', 'AM', 'D', 'CIR', 'NS', 'C', 'ATT', 'AC'] as const;
 export type CodeTypeActe = (typeof CODES_TYPES_ACTES)[number];
 
-/**
- * Le Ministre ne signe pas les décrets : EACT gère leur projet, le circuit interne,
- * la transmission à la Présidence ou aux services du Premier Ministre, puis enregistre le texte signé.
- */
+/** Décrets signés hors du ministère (Président ou Premier Ministre) : EACT transmet le projet puis enregistre le texte signé (ADR 0008). */
 export const TYPES_SIGNES_HORS_MINISTERE: readonly CodeTypeActe[] = ['DEC'];
 
 export enum NiveauConfidentialite {

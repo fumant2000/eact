@@ -19,15 +19,10 @@ const urlVerification = (code: string) => `${process.env.WEB_URL ?? process.env.
 
 function codeCourt(): string {
   const c = [...randomBytes(6)].map((b) => ALPHABET[b % ALPHABET.length]).join('');
-  return `${c.slice(0, 4)}-${c.slice(4)}`; // ex. K7Q2-9M, imprimé sous le QR
+  return `${c.slice(0, 4)}-${c.slice(4)}`; // imprimé sous le QR
 }
 
-/**
- * ISignature — UC-09 « Signer un acte » (BF-29 à BF-33, RG-08 à RG-12, ADR 0003).
- * Une seule transaction : verrou de l'acte, séquenceur (SELECT … FOR UPDATE), référence, empreinte,
- * clé d'idempotence, journal. Le PDF/A est produit après validation ; s'il échoue (Gotenberg arrêté),
- * l'acte reste signé et numéroté (RG-09) et le PDF est régénéré à la première demande.
- */
+/** M06 ISignature — BF-29 à BF-33, RG-08 à RG-12 (UC-09, ADR 0003). */
 @Injectable()
 export class SignatureService {
   private readonly logger = new Logger(SignatureService.name);
@@ -59,7 +54,7 @@ export class SignatureService {
           // Délégation de signature : les types cochés (vide = tous)
           { type: TypeDelegation.SIGNATURE, perimetre: { has: codeType } },
           { type: TypeDelegation.SIGNATURE, perimetre: { isEmpty: true } },
-          // Intérim du Ministre : l'ensemble de ses attributions (maquette F2)
+          // Intérim du Ministre : l'ensemble de ses attributions
           { type: TypeDelegation.INTERIM },
         ],
       },
@@ -69,7 +64,7 @@ export class SignatureService {
     return { peut: true as const, qualite: delegation.mention, delegationId: delegation.id };
   }
 
-  /** E1 « À signer » : actes prêts à signer relevant de la compétence de l'agent. */
+  /** BF-29 : actes prêts à signer relevant de la compétence de l'agent. */
   async aSigner(u: UtilisateurConnecte) {
     const actes = await this.prisma.acte.findMany({
       where: { statut: StatutActe.PRET_A_SIGNER, typeActe: { signeHorsMinistere: false } },
@@ -101,7 +96,7 @@ export class SignatureService {
     if (!cle || cle.length < 8 || cle.length > 100) {
       throw new BadRequestException({ code: 'CLE_IDEMPOTENCE', message: 'En-tête Idempotency-Key requis (§16.3)' });
     }
-    // 3a : requête rejouée (double clic, coupure) → même résultat, pas de second numéro.
+    // UC-09 3a : requête rejouée → même résultat, pas de second numéro.
     const deja = await this.prisma.cleIdempotence.findUnique({ where: { cle } });
     if (deja) {
       if (deja.utilisateurId !== u.sub || deja.route !== ROUTE) throw new ConflictException({ code: 'CLE_IDEMPOTENCE', message: 'Clé déjà utilisée' });
@@ -153,7 +148,7 @@ export class SignatureService {
 
         const chaine = [complet.structure.parent?.code, complet.structure.code].filter((c): c is string => !!c);
         const reference = formaterReference({ sequence, codeType: complet.typeActe.code, chaineStructures: chaine, annee });
-        // Empreinte du texte signé (BF-32) : imprimée sur l'acte, affichée sur la page de vérification.
+        // Empreinte du texte signé (BF-32), imprimée sur l'acte et affichée à la vérification.
         const empreinteSha256 = createHash('sha256')
           .update(JSON.stringify([reference, complet.typeActe.code, complet.objet, complet.contenu, complet.destinataires.map((d) => d.libelle), maintenant.toISOString(), u.sub, competence.delegationId ?? null]))
           .digest('hex');
@@ -189,13 +184,12 @@ export class SignatureService {
     }
 
     this.events.emit(EVENEMENTS.ACTE_SIGNE, { acteId });
-    // Le PDF/A est produit en arrière-plan : la signature est acquise, l'écran E4 suit pdfDisponible.
-    // En mode complet, ce traitement passera par la file BullMQ « documents » du worker (§16.2).
+    // PDF/A hors transaction : s'il échoue, l'acte reste signé (RG-09) et le PDF est régénéré à la demande.
     setImmediate(() => void this.genererPdf(acteId).catch((e) => this.logger.warn(`PDF/A différé pour ${acteId} : ${(e as Error).message}`)));
     return { ...(await this.resultat(acteId)), rejoue: false };
   }
 
-  /** Ce que voient le signataire (E4) et la fiche d'un acte signé (E6). */
+  /** Résultat d'une signature : référence, horodatage, QR, empreinte (BF-30 à BF-33). */
   async resultat(acteId: string) {
     const a = await this.prisma.acte.findUniqueOrThrow({ where: { id: acteId }, include: { signataire: true, delegation: true } });
     if (!a.reference || !a.codeVerification || !a.signeLe) throw new ConflictException({ code: 'NON_SIGNE', message: "L'acte n'est pas signé" });
@@ -246,7 +240,7 @@ export class SignatureService {
     return fichier;
   }
 
-  /** R-06 : aperçu A4 d'un projet, tel qu'il sera imprimé, avant soumission ou signature. */
+  /** BF-16 : aperçu A4 d'un projet, avant soumission ou signature. */
   async apercu(acteId: string): Promise<Buffer> {
     const a = await this.prisma.acte.findUniqueOrThrow({
       where: { id: acteId },

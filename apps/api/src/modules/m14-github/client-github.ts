@@ -8,13 +8,7 @@ const API = 'https://api.github.com';
 const SEUIL_DISJONCTEUR = 5; // échecs consécutifs (CDC §19.3)
 const OUVERTURE_MS = 60_000;
 
-/**
- * Client REST GitHub (CDC §19.2, §19.3).
- * Authentification, par ordre de préférence : GitHub App (JWT RS256 → jeton d'installation d'1 h),
- * jeton personnel (GITHUB_TOKEN), ou aucune (dépôt public, 60 requêtes / h).
- * Disjoncteur : 5 échecs consécutifs ouvrent le circuit 60 s ; un appel d'essai décide de sa fermeture.
- * Journalisation : route, statut, durée — jamais de contenu.
- */
+/** Client REST GitHub avec disjoncteur (CDC §19.3) ; authentification : GitHub App, sinon GITHUB_TOKEN, sinon anonyme. */
 @Injectable()
 export class ClientGithub {
   private readonly logger = new Logger(ClientGithub.name);

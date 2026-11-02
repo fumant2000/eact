@@ -1,7 +1,7 @@
 import { PageResultat } from '@/features/verification/VerificationPublique';
 import type { Verification } from '@/features/signature/model/signature.api';
 
-// UC-17 / V-02 — cible du QR code (BF-55, BF-56, RG-21). Rendue côté serveur, sans authentification.
+// UC-17 — cible du QR code (BF-55, BF-56, RG-21), rendue côté serveur sans authentification.
 export const dynamic = 'force-dynamic';
 
 async function verifier(code: string): Promise<Verification | null> {

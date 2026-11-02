@@ -1,6 +1,6 @@
 'use client';
 
-// Composants du parapheur : badge d'échéance (DueBadge) et boîtes de décision D3 (viser), D4 (corriger), D5 (rejeter).
+// Composants du parapheur : badge d'échéance et boîtes de décision viser, corriger, rejeter (BF-24 à BF-26).
 import { AlertTriangle, Check, Clock, Hourglass, Undo2, XCircle } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Dialogue } from '@/components/ui/Dialogue';
@@ -60,7 +60,7 @@ function ZoneMotif({ id, libelle, obligatoire, valeur, onChange, erreur }: { id:
   );
 }
 
-/** D3 — Viser (observation facultative). */
+/** Viser (observation facultative). */
 export function DialogueVisa({
   ouvert,
   objet,
@@ -97,7 +97,7 @@ export function DialogueVisa({
   );
 }
 
-/** D4 — Demander une correction : étape de retour + motif obligatoire (RG-06). */
+/** Demander une correction : étape de retour + motif obligatoire (RG-06). */
 export function DialogueCorrection({
   ouvert,
   redacteur,
@@ -151,7 +151,7 @@ export function DialogueCorrection({
   );
 }
 
-/** D5 — Rejeter définitivement : motif obligatoire, bouton désactivé tant qu'il manque (RG-05). */
+/** Rejeter définitivement : motif obligatoire, bouton désactivé tant qu'il manque (RG-05). */
 export function DialogueRejet({ ouvert, onAnnuler, onConfirmer, enCours }: { ouvert: boolean; onAnnuler: () => void; onConfirmer: (motif: string) => void; enCours?: boolean }) {
   const { t } = useT();
   const [motif, setMotif] = useState('');

@@ -1,6 +1,6 @@
 'use client';
 
-// I1 · Journal d'audit et I3 · Vérifier l'intégrité (auditeur, administrateur).
+// Journal d'audit et vérification d'intégrité (BF-48 à BF-50), pour auditeur et administrateur.
 import { ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Alert, Button } from '@/components/ui/primitives';
 import { useAuditViewModel } from '@/features/audit/view-model/useAuditViewModel';

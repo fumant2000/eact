@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vues F1 « Délégations » et F2 « Déclarer une délégation » (BF-09, BF-10).
+// MVVM — Vues « Délégations » et « Déclarer une délégation » (BF-09, BF-10).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Ban, Check, Clock, Plus, Smartphone } from 'lucide-react';
 import Link from 'next/link';
@@ -70,7 +70,6 @@ function CarteDelegation({ d, onRevoquer }: { d: Delegation; onRevoquer: (d: Del
   );
 }
 
-/** F1 */
 export function ListeDelegations() {
   const { t } = useT();
   const client = useQueryClient();
@@ -126,7 +125,6 @@ export function ListeDelegations() {
 const aujourdhui = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Africa/Douala' }); // AAAA-MM-JJ
 const dansJours = (n: number) => new Date(Date.now() + n * 86_400_000).toLocaleDateString('sv-SE', { timeZone: 'Africa/Douala' });
 
-/** F2 */
 export function DeclarerDelegation() {
   const { t, langue } = useT();
   const router = useRouter();
@@ -145,7 +143,7 @@ export function DeclarerDelegation() {
 
   const typeEffectif: TypeDelegation = type ?? (c?.peutDeleguerSignature ? 'SIGNATURE' : 'INTERIM');
   const personne = c?.personnes.find((p) => p.id === delegataireId);
-  // Mention imprimée : « Pour le Ministre et par délégation, Le Secrétaire Général » (annexe A)
+  // Mention imprimée sous la signature (annexe A).
   const qualite = personne?.roles.includes('SECRETAIRE_GENERAL') ? 'Le Secrétaire Général' : (personne?.nom ?? '…');
   const mention = baseMention === 'autre' ? mentionLibre.trim() : `${baseMention}, ${qualite}`;
   const valide = !!delegataireId && du <= au && mention.length >= 3 && (typeEffectif === 'INTERIM' || perimetre.length > 0);

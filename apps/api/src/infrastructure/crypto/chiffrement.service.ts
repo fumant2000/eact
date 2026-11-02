@@ -1,10 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 
-/**
- * Chiffrement au repos des secrets (TOTP, paramètres SMTP/SMS/GitHub — BF-66, ENF-06).
- * AES-256-GCM ; la clé est dérivée de SECRETS_ENCRYPTION_KEY. Format stocké : base64(iv | tag | chiffré).
- */
+/** Chiffrement au repos des secrets (BF-66, ENF-06) : AES-256-GCM, stocké en base64(iv | tag | chiffré). */
 @Injectable()
 export class ChiffrementService {
   private readonly cle: Buffer;

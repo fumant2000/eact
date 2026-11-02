@@ -1,7 +1,7 @@
-// Gabarit HTML de l'acte signé (maquette E5, annexe A), converti en PDF/A-2b par Gotenberg.
+// Gabarit HTML de l'acte (BF-32), converti en PDF/A-2b par Gotenberg.
 import { LIBELLES_STRUCTURES, TITRES_TYPES } from '@eact/shared';
 
-/** Projet non signé (aperçu R-06) : ni référence, ni cachet, ni QR ; filigrane « PROJET ». */
+/** Projet non signé : ni référence, ni cachet, ni QR ; filigrane « PROJET ». */
 export interface DonneesApercu {
   codeType: string;
   objet: string;
@@ -28,16 +28,16 @@ export interface DonneesActeSigne {
 }
 
 const echapper = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-const FUSEAU = 'Africa/Douala'; // WAT, heure du serveur (§16.4)
+const FUSEAU = 'Africa/Douala'; // WAT (§16.4)
 
 /** « 1er novembre 2026 » */
-export function dateLongue(d: Date): string {
+function dateLongue(d: Date): string {
   const parties = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long', year: 'numeric' }).formatToParts(d);
   return parties.map((p) => (p.type === 'day' && p.value === '1' ? '1er' : p.value)).join('');
 }
 
 /** « 01/11/2026 10:42:18 WAT » */
-export function horodatage(d: Date): string {
+function horodatage(d: Date): string {
   return `${new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, dateStyle: 'short', timeStyle: 'medium' }).format(d).replace(',', '')} WAT`;
 }
 
@@ -118,7 +118,7 @@ function htmlActe(a: (DonneesActeSigne & { projet: false }) | (DonneesApercu & {
 </body></html>`;
 }
 
-/** Pied de page Gotenberg : numérotation des pages (les classes pageNumber / totalPages sont remplies par Chromium). */
+/** Pied de page Gotenberg : pageNumber / totalPages sont remplis par Chromium. */
 export const PIED_DE_PAGE = `<html><head><style>
   body { margin: 0; font-family: Arial, sans-serif; font-size: 8pt; color: #5b6478; }
 </style></head><body><div style="width: 100%; box-sizing: border-box; padding: 0 0.7in; text-align: right;">Page&nbsp;<span class="pageNumber"></span>&nbsp;/&nbsp;<span class="totalPages"></span></div></body></html>`;

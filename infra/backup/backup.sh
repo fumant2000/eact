@@ -1,6 +1,5 @@
 #!/bin/sh
-# Sauvegarde complète quotidienne (CDC §16.6) ; le WAL archivé assure le RPO d'1 h.
-# La copie hors site (NAS, autre bâtiment) se fait par rsync depuis l'hôte.
+# Sauvegarde complète quotidienne ; le WAL archivé assure le RPO d'1 h (copie hors site : rsync depuis l'hôte).
 set -e
 while true; do
   f="/backups/eact-$(date +%Y%m%d-%H%M).dump"

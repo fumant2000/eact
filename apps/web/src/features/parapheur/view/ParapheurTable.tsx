@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue D1 « Parapheur » : viser en 3 clics depuis la ligne (Viser → Confirmer → toast « Annuler »).
+// MVVM — Vue « Parapheur » (BF-23) : viser en 3 clics depuis la ligne (Viser → Confirmer → toast « Annuler »).
 import { Check, ChevronRight, Lock, Search } from 'lucide-react';
 import Link from 'next/link';
 import { StatutBadge } from '@/components/StatutBadge';

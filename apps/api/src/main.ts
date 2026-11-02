@@ -12,11 +12,11 @@ async function bootstrap() {
   app.enableShutdownHooks();
   app.set('trust proxy', 1); // IP réelle derrière nginx / le proxy Next (journal d'audit)
   app.use(cookieParser());
-  // DTO validés et nettoyés : champs inconnus refusés (CDC tableau 24, injection)
+  // DTO validés, champs inconnus refusés (CDC tableau 24)
   app.useGlobalFilters(new FiltreErreurs());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
 
-  // Contrat d'interface front/back (ENF-09) : http://localhost:3000/docs
+  // Contrat d'interface Swagger : /docs
   const config = new DocumentBuilder()
     .setTitle('EACT API')
     .setDescription("Gestion électronique des actes administratifs — Ministère de l'Enseignement Supérieur (MINESUP)")

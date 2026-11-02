@@ -1,6 +1,6 @@
 import { EcranDemandeLien } from '@/features/auth/view/EcransMotDePasse';
 
-// B5 · /mot-de-passe
+// Mot de passe oublié (BF-05).
 export default function MotDePassePage() {
   return <EcranDemandeLien />;
 }

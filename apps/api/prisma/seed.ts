@@ -1,8 +1,4 @@
-/**
- * Données de démarrage : organigramme pilote (décret n° 2012/433), types d'actes (annexe B),
- * circuit d'une note de service, gabarits, et — hors production — comptes de démonstration.
- * Idempotent : peut être relancé sans dupliquer les données.
- */
+/** Seed idempotent : organigramme (décret n° 2012/433), types d'actes, circuits, gabarits et, hors production, comptes de démo. */
 import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,7 +8,7 @@ import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
-/** Secret TOTP partagé des comptes de démo : à ajouter dans l'application d'authentification du présentateur. */
+/** Secret TOTP partagé des comptes de démo. */
 const SECRET_TOTP_DEMO = 'JBSWY3DPEHPK3PXP';
 
 /** Même format que ChiffrementService (AES-256-GCM, clé dérivée de SECRETS_ENCRYPTION_KEY). */
@@ -65,7 +61,7 @@ async function main() {
   const d = await typeParCode('D');
   const att = await typeParCode('ATT');
 
-  // Circuits observés (CDC tableau 3, à confirmer à l'entretien), émis par la DAG. La signature suit la dernière étape.
+  // Circuits émis par la DAG (CDC tableau 3) ; la signature suit la dernière étape.
   const circuits = [
     {
       typeActeId: ns.id,
@@ -100,8 +96,7 @@ async function main() {
     });
   }
 
-  // Gabarits : copie de référence du dépôt eact-gabarits (dossier gabarits/ à la racine), chargée dans le cache (RG-23).
-  // L'administrateur synchronise ensuite depuis GitHub (BF-59).
+  // Gabarits : copie locale du dossier gabarits/ chargée dans le cache (RG-23), resynchronisable depuis GitHub (BF-59).
   const dossier = join(__dirname, '..', '..', '..', 'gabarits');
   for (const langue of [Langue.FR, Langue.EN]) {
     const rep = join(dossier, langue.toLowerCase());
@@ -119,9 +114,6 @@ async function main() {
       });
     }
   }
-  // Anciens chemins (premiers seeds) : retirés s'ils ne servent à aucun acte.
-  await prisma.modeleActe.deleteMany({ where: { cheminGithub: { endsWith: '.md' }, actes: { none: {} } } });
-
   if (process.env.NODE_ENV === 'production') return;
 
   // ───── Comptes de démonstration (noms fictifs) — mot de passe : DEMO_MOT_DE_PASSE ─────
@@ -134,7 +126,7 @@ async function main() {
     { matricule: 'MINESUP-04812', prenom: 'Christelle', nom: 'EBOGO', structureId: sp.id, roles: [Role.REDACTEUR] },
     { matricule: 'MINESUP-05520', prenom: 'Solange', nom: 'MBARGA', structureId: daj.id, roles: [Role.JURISTE] },
     { matricule: 'MINESUP-06233', prenom: 'Daniel', nom: 'FOTSO', structureId: ct.id, roles: [Role.TRADUCTEUR] },
-    // Pas de TOTP : montre l'enrôlement obligatoire (maquette B3) à la première connexion.
+    // Sans TOTP : enrôlement obligatoire à la première connexion (BF-02).
     { matricule: 'MINESUP-02019', prenom: 'Hervé', nom: 'TCHAMBA', structureId: dsi.id, roles: [Role.ADMINISTRATEUR] },
     { matricule: 'MINESUP-07341', prenom: 'Aïcha', nom: 'MOUSSA', structureId: igs.id, roles: [Role.AUDITEUR] },
   ];

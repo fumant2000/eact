@@ -1,6 +1,5 @@
-# Production / préproduction (CDC §15, §16.6) :
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-# Pas d'override dev ici : aucun port publié hormis nginx (443).
+# Production : docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Sans l'override dev : seul nginx publie des ports (80/443).
 services:
   nginx:
     ports: !override
@@ -61,7 +60,7 @@ services:
     networks: [data]
     restart: unless-stopped
 
-  # Sauvegarde quotidienne (3-2-1 : copie locale ici, copie NAS hors site par rsync).
+  # Sauvegarde quotidienne (3-2-1) : copie locale ici, copie hors site par rsync depuis l'hôte.
   backup:
     image: postgres:16-alpine
     environment:

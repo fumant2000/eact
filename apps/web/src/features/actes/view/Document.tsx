@@ -1,4 +1,4 @@
-// Éléments du document officiel (annexe A, maquettes C3/C4) : en-tête bilingue verrouillé, titre, bloc de signature.
+// Éléments du document officiel (annexe A) : en-tête bilingue verrouillé, titre, bloc de signature.
 import { LIBELLES_STRUCTURES, TITRES_TYPES } from '@eact/shared';
 import { Lock } from 'lucide-react';
 import type { ReactNode } from 'react';

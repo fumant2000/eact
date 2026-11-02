@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Antivirus } from '../../infrastructure/antivirus/antivirus';
 
-/** Ce qui circule dans les tubes : le fichier et ce que les filtres en ont appris. */
 export interface DocumentEnCours {
   contenu: Buffer;
   nomFichier: string;
@@ -83,7 +82,6 @@ export class FiltreEmpreinte implements Filtre {
   }
 }
 
-/** Les tubes : la sortie d'un filtre actif est l'entrée du suivant. */
 export async function executerPipeline(filtres: Filtre[], doc: DocumentEnCours): Promise<DocumentEnCours> {
   let courant = doc;
   for (const filtre of filtres) {

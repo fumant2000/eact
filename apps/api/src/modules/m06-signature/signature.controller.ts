@@ -21,13 +21,13 @@ export class SignatureController {
     private readonly actes: ActesService,
   ) {}
 
-  /** E1 : actes prêts à signer relevant de ma compétence (titulaire ou délégation en cours). */
+  /** BF-29 : actes prêts à signer relevant de ma compétence (titulaire ou délégation en cours). */
   @Get('signature')
   aSigner(@UtilisateurCourant() u: UtilisateurConnecte) {
     return this.signature.aSigner(u);
   }
 
-  /** E2 / E6 : puis-je signer, en quelle qualité ; ou résultat de la signature. */
+  /** Puis-je signer et en quelle qualité (RG-11) ; ou résultat de la signature. */
   @Get('actes/:id/signature')
   async etat(@Param('id', Uuid) id: string, @UtilisateurCourant() u: UtilisateurConnecte) {
     const acte = await this.actes.detail(id, u); // contrôle d'accès (RG-15)
@@ -55,7 +55,7 @@ export class SignatureController {
     return this.signature.signer(id, u, dto.code, cle, req.ip ?? 'inconnue');
   }
 
-  /** R-06 : aperçu A4 du projet (filigrane « PROJET », sans numéro ni signature). */
+  /** BF-16 : aperçu A4 du projet (filigrane « PROJET », sans numéro ni signature). */
   @Get('actes/:id/apercu')
   async apercu(@Param('id', Uuid) id: string, @UtilisateurCourant() u: UtilisateurConnecte, @Res() res: Response) {
     await this.actes.detail(id, u);

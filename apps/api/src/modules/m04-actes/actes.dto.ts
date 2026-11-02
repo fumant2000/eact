@@ -10,7 +10,7 @@ export class CreerActeDto {
   modeleId?: string;
 }
 
-/** Enregistrement automatique (BF-17) : chaque champ est facultatif, la version est obligatoire (§14.2). */
+/** BF-17 : enregistrement automatique ; champs facultatifs, version obligatoire (verrou optimiste). */
 export class ModifierActeDto {
   @ApiProperty({ description: 'Version lue par le client (verrou optimiste)' }) @IsInt() @Min(1)
   version!: number;

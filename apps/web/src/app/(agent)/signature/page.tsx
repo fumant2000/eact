@@ -1,6 +1,6 @@
 import { ListeASigner } from '@/features/signature/view/ListeASigner';
 
-// E1 · /signature
+// Actes à signer (UC-09).
 export default function SignaturePage() {
   return <ListeASigner />;
 }

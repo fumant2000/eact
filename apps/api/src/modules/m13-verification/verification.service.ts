@@ -4,10 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StatutActe } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
-/**
- * IVerification — UC-17 (BF-55 à BF-57, RG-21). Sans authentification.
- * N'expose que référence, type, date, signataire, statut et empreintes ; l'objet seulement si l'acte est Public.
- */
+/** M13 IVerification — BF-55 à BF-57, RG-21 (UC-17), sans authentification. */
 @Injectable()
 export class VerificationService {
   constructor(

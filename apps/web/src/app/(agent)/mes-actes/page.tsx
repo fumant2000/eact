@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { MesActes } from '@/features/actes/view/MesActes';
 
-// C1 · /mes-actes
+// Mes actes du rédacteur (M04).
 export default function MesActesPage() {
   return (
     <Suspense>

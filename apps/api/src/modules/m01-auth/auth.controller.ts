@@ -12,7 +12,7 @@ import {
 import { CodeDto, ConnexionDemoDto, ConnexionDto, OubliDto, ReinitialisationDto } from './auth.dto';
 import { AuthService, type ResultatConnexion } from './auth.service';
 
-// Cookies httpOnly : le JavaScript du navigateur ne lit jamais les jetons (CDC tableau 24).
+// Cookies httpOnly : jetons illisibles par le JavaScript du navigateur (CDC tableau 24).
 const base: CookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', path: '/' };
 const COOKIES = {
   [COOKIE_ACCES]: { ...base, sameSite: 'lax', maxAge: 15 * 60_000 },
@@ -27,7 +27,7 @@ const ip = (req: Request) => req.ip ?? 'inconnue';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
-  /** Pose les cookies selon l'étape et ne renvoie au navigateur que l'étape suivante. */
+  /** Pose les cookies ; le corps ne contient que l'étape suivante, jamais les jetons. */
   private repondre(res: Response, r: ResultatConnexion) {
     if (r.etape === 'CONNECTE') {
       res.clearCookie(COOKIE_MFA, base);
@@ -108,6 +108,8 @@ export class AuthController {
     this.exigerDemo();
     return this.auth.codeDemo(u.sub);
   }
+
+  // ─────────── BF-05 : mot de passe oublié ───────────
 
   @Public() @Post('mot-de-passe/oubli') @HttpCode(202)
   oubli(@Body() dto: OubliDto, @Req() req: Request) {

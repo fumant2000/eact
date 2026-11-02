@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue : maquettes B1 (connexion), B2 (second facteur), B3 (enrôlement), B4 (verrouillage).
+// MVVM — Vue de la connexion : identifiants, second facteur, enrôlement, verrouillage (BF-01 à BF-03).
 import { Copy, Download, Eye, EyeOff, Lock, LogIn, Smartphone } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';

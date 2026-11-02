@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vues de la signature : E2 (panneau « À la signature »), E3 (code), E4 (progression, succès), E6 (acte signé).
+// MVVM — Vues de la signature (UC-09) : panneau, code TOTP, progression, acte signé.
 import { AlertCircle, Check, Clock, Copy, Download, ExternalLink, Hash, Loader2, Lock, QrCode, Smartphone, Stamp } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -15,7 +15,7 @@ import type { useSignatureViewModel } from '../view-model/useSignatureViewModel'
 type VM = ReturnType<typeof useSignatureViewModel>;
 const horodatage = (iso: string) => `${new Date(iso).toLocaleString('fr-FR', { timeZone: 'Africa/Douala', dateStyle: 'short', timeStyle: 'medium' }).replace(',', '')} WAT`;
 
-/** E2 : ce qui va se passer au clic sur « Signer ». */
+/** Ce qui va se passer au clic sur « Signer ». */
 export function PanneauALaSignature() {
   const { t } = useT();
   const lignes: [ReactNode, string][] = [
@@ -52,7 +52,7 @@ function Etape({ etat, children }: { etat: 'fait' | 'courant' | 'aVenir'; childr
   );
 }
 
-/** E4 : carte de l'acte signé, réutilisée sur la fiche (E6). */
+/** Carte de l'acte signé, réutilisée sur la fiche. */
 export function CarteActeSigne({ r, pied }: { r: ResultatSignature; pied?: ReactNode }) {
   const { t } = useT();
   const [copie, setCopie] = useState(false);
@@ -106,14 +106,14 @@ export function CarteActeSigne({ r, pied }: { r: ResultatSignature; pied?: React
   );
 }
 
-/** E3 + E4 : code TOTP, progression puis succès. */
+/** Code TOTP, progression puis succès. */
 export function DialogueSignature({ vm, objet }: { vm: VM; objet: string }) {
   const { t } = useT();
   const [code, setCode] = useState('');
   const [etapeAffichee, setEtapeAffichee] = useState(0);
   const qualite = vm.etat && !vm.etat.signe ? vm.etat.qualite : null;
 
-  // Progression E4 : les deux premières étapes défilent pendant l'appel, la 3e suit la génération réelle du PDF/A.
+  // Les deux premières étapes défilent pendant l'appel, la 3e suit la génération réelle du PDF/A.
   useEffect(() => {
     if (vm.phase !== 'enCours') return setEtapeAffichee(0);
     const m = setInterval(() => setEtapeAffichee((e) => Math.min(e + 1, 2)), 400);

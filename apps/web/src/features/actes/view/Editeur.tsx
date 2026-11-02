@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue de l'éditeur d'acte : C4 (bureau et mobile), C5 pièces, C6 contrôle, C7 soumission, C10 suppression.
+// MVVM — Vue de l'éditeur d'acte : texte, pièces, contrôle, soumission, suppression (BF-17, BF-18, RG-03).
 import { AlertCircle, ArrowLeft, Check, Download, Eye, History, Loader2, Send, ShieldAlert, ShieldCheck, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -92,7 +92,7 @@ function Ampliations({ valeurs, onChange, invalide, lecture }: { valeurs: string
   );
 }
 
-// ─────────── Pièces jointes (C5) ───────────
+// ─────────── Pièces jointes (BF-18) ───────────
 function IconeFichier({ nom }: { nom: string }) {
   const ext = nom.split('.').pop()?.toUpperCase().slice(0, 4) ?? '?';
   const couleur = ext === 'PDF' ? 'bg-[#fdecec] text-[#a81f26]' : ext === 'DOCX' ? 'bg-primary-50 text-primary-700' : 'bg-[#e3f4ec] text-[#0b6447]';
@@ -291,7 +291,7 @@ export function Editeur({ id }: { id: string }) {
   return <EditeurCharge key={vm.generation} vm={vm} acte={vm.acte} b={vm.brouillon} />;
 }
 
-/** C9 : motif de la correction demandée, visible tant que l'acte est à corriger. */
+/** Motif de la correction demandée (RG-06), visible tant que l'acte est à corriger. */
 function BandeauCorrection({ id }: { id: string }) {
   const { t, langue } = useT();
   const { data } = useQuery({ queryKey: ['suivi', id], queryFn: () => parapheurApi.suivi(id) });
@@ -322,7 +322,7 @@ function allerAuChamp(champ: string) {
   el?.focus();
 }
 
-/** Liste visible en permanence : ce qui est exigé, coché en direct (réponse à « qu'est-ce qui est requis ? »). */
+/** Liste « À compléter » toujours visible : champs exigés cochés en direct (RG-03). */
 function ACompleter({ exiges, restants }: { exiges: string[]; restants: string[] }) {
   const { t } = useT();
   return (
@@ -365,7 +365,6 @@ function EditeurCharge({ vm, acte, b }: { vm: VM; acte: Acte; b: Brouillon }) {
 
   return (
     <div className="space-y-6">
-      {/* Barre de l'éditeur */}
       <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card p-3">
         <Link href="/mes-actes" aria-label={t('editeur.retour')} className="grid size-11 place-items-center rounded-md border border-input hover:bg-accent">
           <ArrowLeft size={18} />
@@ -416,7 +415,6 @@ function EditeurCharge({ vm, acte, b }: { vm: VM; acte: Acte; b: Brouillon }) {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-        {/* Document */}
         <div className="space-y-4">
           {!lecture && editor && <BarreOutils editor={editor} />}
           <article className="space-y-6 rounded-lg border border-border bg-white p-6 text-[#1a2033] shadow-sm sm:p-12">
@@ -459,7 +457,6 @@ function EditeurCharge({ vm, acte, b }: { vm: VM; acte: Acte; b: Brouillon }) {
           )}
         </div>
 
-        {/* Panneau latéral */}
         <aside className="space-y-6">
           {!lecture && <ACompleter exiges={acte.champsObligatoires} restants={restants} />}
           {lecture ? null : <Informations b={b} acte={acte} modifier={vm.modifier} />}

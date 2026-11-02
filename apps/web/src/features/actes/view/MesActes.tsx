@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue C1 « Mes actes ». Tableau en bureau, cartes sous 768 px (guide §4).
+// MVVM — Vue « Mes actes » : tableau en bureau, cartes sous 768 px.
 import { Plus, Search, Undo2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -107,7 +107,6 @@ export function MesActes() {
         {vm.chargement && <p className="p-6 text-muted-foreground">{t('commun.chargement')}</p>}
         {!vm.chargement && vm.actes.length === 0 && <p className="p-6 text-muted-foreground">{t('mesActes.vide')}</p>}
 
-        {/* Bureau */}
         {vm.actes.length > 0 && (
           <table className="hidden w-full text-sm md:table">
             <thead className="text-left text-muted-foreground">
@@ -138,7 +137,6 @@ export function MesActes() {
           </table>
         )}
 
-        {/* Mobile */}
         <ul className="divide-y divide-border md:hidden">
           {vm.actes.map((a) => (
             <li key={a.id} className="space-y-2 p-4">

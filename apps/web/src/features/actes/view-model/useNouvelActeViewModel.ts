@@ -1,7 +1,7 @@
 'use client';
 
-// MVVM — Vue-Modèle de l'assistant « Nouvel acte » (C2 → C3, UC-06 étapes 1 à 3).
-// L'étape est portée par l'URL (/actes/nouveau?etape=modele&type=…) : le bouton Précédent du navigateur fonctionne.
+// MVVM — Vue-Modèle de l'assistant « Nouvel acte » (UC-06 étapes 1 à 3).
+// L'étape est portée par l'URL : le bouton Précédent du navigateur fonctionne.
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';

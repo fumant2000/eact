@@ -2,7 +2,7 @@ import { Archive, BadgeCheck, Ban, FilePen, PenTool, Route, Send, Stamp, Undo2, 
 import type { ValeurStatut } from '@eact/shared';
 import fr from '@/i18n/fr.json';
 
-// Couleur + icône + libellé : jamais la couleur seule. Classes du guide d'implémentation P0 (§2).
+// Couleur + icône + libellé : jamais la couleur seule (ENF-11).
 const STYLES: Record<ValeurStatut, { classe: string; icone: LucideIcon }> = {
   BROUILLON: { classe: 'border border-border bg-muted text-muted-foreground', icone: FilePen },
   EN_CIRCUIT: { classe: 'border border-primary-200 bg-primary-100 text-primary-700 dark:border-primary-800 dark:bg-primary-900 dark:text-primary-200', icone: Route },

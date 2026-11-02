@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vues C2 (type d'acte) et C3 (modèle + aperçu).
+// MVVM — Vues de l'assistant « Nouvel acte » : type d'acte, puis modèle et aperçu (UC-06).
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, Button } from '@/components/ui/primitives';

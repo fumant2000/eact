@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { EcranConnexion } from '@/features/auth/view/EcranConnexion';
 
-// B1–B4 · /connexion
+// Connexion et second facteur (BF-01 à BF-03).
 export default function ConnexionPage() {
   return (
     <Suspense>

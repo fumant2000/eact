@@ -1,6 +1,6 @@
 'use client';
 
-// Gabarit commun des écrans B1–B5 : panneau institutionnel à gauche (masqué sous 1024 px), carte à droite.
+// Gabarit commun des écrans d'authentification : panneau institutionnel (masqué sous 1024 px) et carte.
 import { FileText, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';

@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue-Modèle de « Mes actes » (C1) : onglets, filtre, action principale de chaque ligne.
+// MVVM — Vue-Modèle de « Mes actes » : onglets, filtre, action principale de chaque ligne.
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { actesApi, type GroupeStatut, type LigneActe } from '../model/actes.api';
@@ -14,7 +14,7 @@ const GROUPES: Record<Exclude<GroupeStatut, 'tous'>, string[]> = {
 
 export type ActionLigne = 'reprendre' | 'corriger' | 'suivre' | 'voir';
 
-/** Une seule action principale par ligne (guide §5). */
+/** Une seule action principale par ligne. */
 export function actionDe(a: LigneActe): ActionLigne {
   if (a.statut === 'BROUILLON') return 'reprendre';
   if (a.statut === 'A_CORRIGER') return 'corriger';

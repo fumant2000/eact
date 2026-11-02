@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-/**
- * IConvertisseurPdf (CDC tableau 18) : HTML → PDF/A-2b par Gotenberg (Chromium), ENF-09.
- * Mode léger : `npm run infra:pdf` lance le conteneur (port 3002 sur le poste).
- */
+/** IConvertisseurPdf : HTML → PDF/A-2b par Gotenberg (BF-32, ENF-09). */
 @Injectable()
 export class ConvertisseurPdf {
   private readonly url = process.env.GOTENBERG_URL ?? 'http://gotenberg:3000';

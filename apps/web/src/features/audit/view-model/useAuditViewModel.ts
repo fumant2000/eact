@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Modèle + Vue-Modèle du journal d'audit (I1, I3 ; BF-48 à BF-50).
+// MVVM — Modèle + Vue-Modèle du journal d'audit (BF-48 à BF-50).
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { appelApi } from '@/lib/api';
 

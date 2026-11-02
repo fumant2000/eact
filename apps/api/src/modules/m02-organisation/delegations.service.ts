@@ -22,7 +22,7 @@ export interface NouvelleDelegation {
   au: string; // AAAA-MM-JJ, inclus
   mention: string;
   perimetre: string[];
-  code?: string; // TOTP, exigé pour une délégation de signature (F2 « Confirmer avec mon code »)
+  code?: string; // TOTP, exigé pour une délégation de signature
 }
 
 /** Rôles qui peuvent déclarer un intérim (on ne délègue que ce qu'on détient). */
@@ -30,15 +30,11 @@ const ROLES_INTERIM: Role[] = [Role.AUTORITE_SIGNATAIRE, Role.SECRETAIRE_GENERAL
 const VERIFICATION_EXPIRATIONS_MS = 10 * 60_000;
 const nom = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`;
 
-/** Bornes d'une journée à Yaoundé (UTC+1, sans heure d'été) : du 00:00 du premier jour au 23:59:59 du dernier. */
+/** Bornes d'une journée à Yaoundé (UTC+1, sans heure d'été). */
 const debutJour = (j: string) => new Date(`${j}T00:00:00+01:00`);
 const finJour = (j: string) => new Date(`${j}T23:59:59.999+01:00`);
 
-/**
- * IDelegations — M02 (BF-09, BF-10, RG-11, RG-17).
- * La validité s'apprécie toujours par les dates ; la tâche périodique ne fait que matérialiser l'expiration
- * (actif = false) et la journaliser. Mode complet : tâche répétée BullMQ avec verrou Redis (§16.4).
- */
+/** M02 IDelegations — BF-09, BF-10, RG-11, RG-17. */
 @Injectable()
 export class DelegationsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DelegationsService.name);
@@ -59,7 +55,7 @@ export class DelegationsService implements OnModuleInit, OnModuleDestroy {
     clearInterval(this.minuteur);
   }
 
-  /** BF-10 / RG-17 : une délégation arrivée à sa date de fin est désactivée automatiquement. */
+  /** BF-10 / RG-17 : matérialise l'expiration (actif = false) ; la validité se juge toujours sur les dates. */
   async desactiverExpirees() {
     try {
       const expirees = await this.prisma.delegation.findMany({ where: { actif: true, fin: { lt: new Date() } } });
@@ -85,7 +81,7 @@ export class DelegationsService implements OnModuleInit, OnModuleDestroy {
     return d.debut > maintenant ? ('A_VENIR' as const) : ('ACTIVE' as const);
   }
 
-  /** F1 : délégations accordées et reçues. */
+  /** Délégations accordées et reçues. */
   async lister(u: UtilisateurConnecte) {
     const delegations = await this.prisma.delegation.findMany({
       where: { OR: [{ delegantId: u.sub }, { delegataireId: u.sub }] },
@@ -114,7 +110,7 @@ export class DelegationsService implements OnModuleInit, OnModuleDestroy {
       .sort((a, b) => ordre[a.etat] - ordre[b.etat]);
   }
 
-  /** F2 : personnes à qui déléguer, et types d'actes que l'on peut couvrir. */
+  /** Personnes à qui déléguer et types d'actes délégables. */
   async candidats(u: UtilisateurConnecte) {
     const [personnes, types] = await Promise.all([
       this.prisma.utilisateur.findMany({
@@ -155,7 +151,7 @@ export class DelegationsService implements OnModuleInit, OnModuleDestroy {
       throw new UnprocessableEntityException({ code: 'PERIMETRE_INVALIDE', message: 'Cochez au moins un type d’acte couvert' });
     }
 
-    // Acte sensible : confirmé par le second facteur quand le compte en dispose (F2 « Confirmer avec mon code »).
+    // Action sensible : TOTP exigé si le compte l'a activé, et toujours pour une délégation de signature.
     const moi = await this.prisma.utilisateur.findUniqueOrThrow({ where: { id: u.sub } });
     if (moi.totpActive || dto.type === TypeDelegation.SIGNATURE) await this.auth.verifierTotpAction(u.sub, dto.code ?? '', ip);
 
@@ -177,7 +173,7 @@ export class DelegationsService implements OnModuleInit, OnModuleDestroy {
     if (!d) throw new NotFoundException({ code: 'INTROUVABLE', message: 'Délégation introuvable' });
     if (d.delegantId !== u.sub) throw new ForbiddenException({ code: 'ACCES_REFUSE', message: 'Seul l’auteur d’une délégation la révoque' });
     await this.prisma.delegation.update({ where: { id }, data: { actif: false } });
-    // Les actes déjà signés avec cette délégation restent valides (F2, « Bon à savoir »).
+    // Les actes déjà signés avec cette délégation restent valides.
     this.events.emit(EVENEMENTS.DELEGATION_REVOQUEE, { acteurId: u.sub, action: EVENEMENTS.DELEGATION_REVOQUEE, ressourceType: 'delegation', ressourceId: id });
   }
 }

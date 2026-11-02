@@ -1,7 +1,6 @@
 'use client';
 
 // Mode démonstration (DEMO_MODE=true côté API, jamais en production) : comptes en un clic et code TOTP affiché.
-// Permet de présenter la double authentification et la signature sans téléphone.
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, FlaskConical, KeyRound, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -18,7 +17,7 @@ export function useModeDemo() {
 
 type CompteDemo = Extract<NonNullable<ReturnType<typeof useModeDemo>>, { actif: true }>['comptes'][number];
 
-/** Ce que chaque compte fait dans le parcours de démonstration (son rôle métier, pas seulement son rôle technique). */
+/** Rôle métier de chaque compte dans le parcours de démonstration. */
 function useMission() {
   const { t } = useT();
   return (matricule: string) => {
@@ -28,10 +27,7 @@ function useMission() {
   };
 }
 
-/**
- * Liste de sélection des comptes de démonstration : un clic choisit, double-clic ou Entrée entre.
- * Utilisée sur la page de connexion et dans « Changer de compte ».
- */
+/** Comptes de démonstration : un clic choisit, double-clic ou Entrée entre. */
 function ListeComptes({ comptes, actuel, onEntrer, onRemplir, enCours }: {
   comptes: CompteDemo[];
   actuel?: string;
@@ -178,7 +174,7 @@ export function PanneauDemo({ remplir }: { remplir: (matricule: string, motDePas
   );
 }
 
-/** Mode démonstration, menu du profil : passer d'un acteur du circuit à l'autre sans repasser par la connexion. */
+/** Menu du profil : passer d'un acteur à l'autre sans repasser par la connexion. */
 export function DialogueChangerCompte({ ouvert, onFermer, actuel }: { ouvert: boolean; onFermer: () => void; actuel: string }) {
   const { t } = useT();
   const demo = useModeDemo();
@@ -198,7 +194,7 @@ export function DialogueChangerCompte({ ouvert, onFermer, actuel }: { ouvert: bo
   );
 }
 
-/** Code TOTP courant affiché sous le champ de saisie (B2, B3, E3). */
+/** Code TOTP courant affiché sous le champ de saisie. */
 export function CodeDemo({ source, onUtiliser }: { source: 'mfa' | 'session'; onUtiliser: (code: string) => void }) {
   const { t } = useT();
   const demo = useModeDemo();

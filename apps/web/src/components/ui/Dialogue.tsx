@@ -1,6 +1,6 @@
 'use client';
 
-// Boîte de dialogue modale (Dialog / AlertDialog du guide) : <dialog> natif = focus piégé et Échap gérés par le navigateur.
+// Boîte de dialogue modale : <dialog> natif, donc focus piégé et Échap gérés par le navigateur.
 import { useEffect, useRef, type ReactNode } from 'react';
 
 export function Dialogue({

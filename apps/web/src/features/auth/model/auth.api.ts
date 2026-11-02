@@ -46,7 +46,7 @@ export const authApi = {
     appelApi<{ ok: true }>('/v1/auth/mot-de-passe/reinitialisation', { method: 'POST', json: { jeton, motDePasse } }),
 };
 
-/** Politique de la maquette B5, identique au serveur (auth.dto.ts). */
+/** Politique de mot de passe, identique au serveur (auth.dto.ts). */
 export const reglesMotDePasse = (mdp: string, confirmation: string) => ({
   longueur: mdp.length >= 10,
   majChiffre: /[A-Z]/.test(mdp) && /\d/.test(mdp),

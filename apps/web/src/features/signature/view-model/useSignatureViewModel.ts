@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue-Modèle de la signature d'un acte (E2 → E4) : code TOTP, progression, résultat, acte suivant.
+// MVVM — Vue-Modèle de la signature d'un acte (UC-09) : code TOTP, progression, résultat, acte suivant.
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { ErreurApi } from '@/lib/api';
@@ -29,7 +29,7 @@ export function useSignatureViewModel(acteId: string) {
   // Une clé par tentative de signature, conservée pour les renvois après coupure.
   const cle = useRef<string | null>(null);
 
-  // Tant que le PDF/A est en cours de génération, on interroge l'état (étape 3 de E4).
+  // Tant que le PDF/A est en cours de génération, on interroge l'état (BF-32).
   const suivi = useQuery({
     queryKey: ['signature-pdf', acteId],
     queryFn: () => signatureApi.etat(acteId),

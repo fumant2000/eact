@@ -12,12 +12,7 @@ interface Destinataire {
   nom: string;
 }
 
-/**
- * INotifier — M12, volet e-mail (BF-54) : invocation implicite, le circuit ne connaît pas les notifications.
- * En dev, tout part dans Mailpit (http://localhost:8025). Jamais le contenu d'un acte dans un e-mail :
- * objet, type et lien seulement (minimisation, loi n° 2024/017).
- * Une erreur d'envoi est journalisée sans bloquer le circuit ; la file BullMQ avec reprises viendra avec le worker.
- */
+/** M12 INotifier — BF-54 (e-mail) : jamais le contenu d'un acte, seulement objet, type et lien (loi n° 2024/017). */
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);

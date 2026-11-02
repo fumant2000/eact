@@ -8,19 +8,15 @@ export interface Courriel {
   html?: string;
 }
 
-/**
- * IMessagerie — adaptateur SMTP (nodemailer). En dev, SMTP_HOST pointe sur Mailpit :
- * aucun e-mail ne sort, tout est lisible sur http://localhost:8025.
- * P2 (M12) : l'envoi passera par la file BullMQ « notifications » (sémantique « au moins une fois », §16.3).
- */
+/** IMessagerie : adaptateur SMTP (Mailpit en développement). */
 @Injectable()
 export class MessagerieService {
   private readonly logger = new Logger(MessagerieService.name);
   private readonly transport: Transporter = createTransport({
-    host: process.env.SMTP_HOST ?? '127.0.0.1', // pas « localhost » : sous Windows, l'essai IPv6 coûte ~1 s par envoi
+    host: process.env.SMTP_HOST ?? '127.0.0.1', // pas « localhost » : évite un essai IPv6 lent à chaque envoi
     port: Number(process.env.SMTP_PORT ?? 1025),
     secure: false,
-    pool: true, // une connexion réutilisée pour les envois successifs
+    pool: true,
   });
 
   async envoyer(c: Courriel): Promise<void> {

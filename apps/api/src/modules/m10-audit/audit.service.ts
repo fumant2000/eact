@@ -16,10 +16,7 @@ const HASH_ORIGINE = '0'.repeat(64);
 // pg_advisory_xact_lock : une seule insertion à la fois pour garder l'ordre de la chaîne (ADR 0004)
 const VERROU_CHAINE = 4242;
 
-/**
- * JSON canonique : clés triées à tous les niveaux. Indispensable car `details` est stocké en jsonb,
- * et PostgreSQL réordonne les clés : sans cela, l'empreinte relue ne correspondrait plus à celle écrite.
- */
+/** JSON canonique (clés triées à tous les niveaux) : jsonb réordonne les clés, le hash relu différerait sinon. */
 export function jsonCanonique(valeur: unknown): string {
   return JSON.stringify(valeur, (_cle, v: unknown) =>
     v && typeof v === 'object' && !Array.isArray(v)
@@ -41,11 +38,7 @@ export function calculerHash(hashPrecedent: string, e: EntreeAudit, horodatage: 
   return createHash('sha256').update(contenu).digest('hex');
 }
 
-/**
- * IAudit — journal chaîné (BF-48 à BF-50).
- * Écoute tous les événements du bus (invocation implicite) : les modules métier
- * n'appellent l'audit directement que dans une transaction critique (signature).
- */
+/** M10 IAudit — BF-48 à BF-50 : écoute tout le bus ; appel direct seulement dans une transaction métier. */
 @Injectable()
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);

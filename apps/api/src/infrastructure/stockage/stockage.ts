@@ -2,10 +2,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
-/**
- * IStockage (CDC tableau 18) : le métier ne connaît que des clés (« pieces/<acte>/<pièce> »).
- * S3 (RustFS) en conteneurs, disque local en mode léger (STOCKAGE=local).
- */
+/** IStockage : le métier ne manipule que des clés ; S3 en conteneurs, disque local en mode léger. */
 export abstract class Stockage {
   abstract ecrire(cle: string, contenu: Buffer, typeMime: string): Promise<void>;
   abstract lire(cle: string): Promise<Buffer>;

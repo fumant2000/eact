@@ -19,11 +19,7 @@ export interface EtatSynchronisation {
   erreur: string | null;
 }
 
-/**
- * IDepotGabarits — M14 (BF-59, RG-23) : lit les gabarits du dépôt eact-gabarits et les conserve en base.
- * La rédaction ne lit jamais GitHub directement : elle lit le cache, que GitHub soit joignable ou non.
- * Mode complet : l'appel sortant part du worker (seul conteneur autorisé à sortir, ADR 0006).
- */
+/** M14 IDepotGabarits — BF-59, RG-23 : gabarits copiés en base ; la rédaction ne lit que ce cache, jamais GitHub. */
 @Injectable()
 export class GabaritsService {
   private readonly logger = new Logger(GabaritsService.name);

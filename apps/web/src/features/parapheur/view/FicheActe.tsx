@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue D2 « Fiche d'un acte » + cas D8 (visa non proposé). Mobile : colonnes empilées.
+// MVVM — Vue « Fiche d'un acte » (BF-28), y compris le cas du visa non proposé.
 import { ArrowLeft, Building2, Check, CircleDot, Download, Hourglass, Info, Lock, PenTool, Route, ShieldCheck, Stamp, Undo2, UserCheck, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
@@ -202,7 +202,7 @@ export function FicheActe({ id }: { id: string }) {
           </p>
         </div>
         {peutSigner && (
-          // Le SEUL bouton or de l'application (charte, ADR 0007)
+          // Seul bouton or de l'application (ADR 0007)
           <Button variant="seal" size="lg" onClick={sig.ouvrir}><Stamp size={18} aria-hidden /> {t('signature.signer')}</Button>
         )}
         {s.peutViser && (

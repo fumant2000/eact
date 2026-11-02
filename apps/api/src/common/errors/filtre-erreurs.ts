@@ -15,10 +15,7 @@ const CODES_PAR_STATUT: Record<number, string> = {
   429: 'TROP_DE_REQUETES',
 };
 
-/**
- * Toute erreur sort au même format JSON `{ code, message, … }` (README common/).
- * Une erreur inattendue reçoit une référence courte, journalisée avec la pile : l'agent peut la citer à la DSI.
- */
+/** Format d'erreur uniforme `{ code, message }` ; une erreur inattendue reçoit une référence journalisée avec la pile. */
 @Catch()
 export class FiltreErreurs implements ExceptionFilter {
   private readonly logger = new Logger('Erreurs');
@@ -30,7 +27,7 @@ export class FiltreErreurs implements ExceptionFilter {
       const statut = erreur.getStatus();
       const corps = erreur.getResponse();
       const objet = typeof corps === 'string' ? { message: corps } : (corps as Record<string, unknown>);
-      // Erreurs de validation des DTO : messages class-validator regroupés dans `champs`.
+      // Erreurs de validation des DTO regroupées dans `champs`
       const validation = Array.isArray(objet.message) ? { message: 'Données invalides', champs: objet.message } : {};
       return res.status(statut).json({ code: CODES_PAR_STATUT[statut] ?? 'ERREUR', ...objet, ...validation, statusCode: undefined, error: undefined });
     }

@@ -1,9 +1,5 @@
-# Chargé automatiquement en dev par `docker compose up`.
-# Publie les ports des outils pour le poste du développeur (jamais en prod).
-# Ports hôte décalés par défaut (5433, 6380) pour cohabiter avec d'autres projets ; modifiables dans .env.
-#
-# Le réseau `data` est internal (ADR 0006) : Docker n'y publie aucun port. En dev seulement,
-# postgres, redis et s3 rejoignent aussi `devhost` pour être joignables depuis le poste.
+# Dev uniquement (chargé automatiquement par `docker compose up`) : ports sur 127.0.0.1, modifiables dans .env.
+# `data` étant internal (ADR 0006), postgres/redis/s3 rejoignent aussi `devhost` pour être joignables du poste.
 services:
   postgres:
     ports: ["127.0.0.1:${PG_HOST_PORT:-5433}:5432"]

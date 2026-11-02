@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vue-Modèle de la connexion (B1 → B4) : un automate d'étapes, sans aucun import graphique.
+// MVVM — Vue-Modèle de la connexion (BF-01 à BF-03) : automate d'étapes, sans import graphique.
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ErreurApi } from '@/lib/api';

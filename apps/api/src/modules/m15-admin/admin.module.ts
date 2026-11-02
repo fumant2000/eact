@@ -3,10 +3,6 @@ import { CircuitModule } from '../m05-circuit/circuit.module';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
-/**
- * M15 — Administration et paramétrage
- * Exigences : BF-64, BF-65 (P0), BF-66 (P1) ; M02 côté administrateur : BF-06 à BF-08
- * ENF-08 : types, circuits et structures s'ajoutent par paramétrage, sans modifier le code.
- */
+/** M15 Administration et paramétrage — BF-64, BF-65 (BF-66 en P1), BF-06 à BF-08 côté admin, ENF-08. */
 @Module({ imports: [CircuitModule], controllers: [AdminController], providers: [AdminService] })
 export class AdminModule {}

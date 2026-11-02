@@ -14,7 +14,7 @@ export class GithubController {
     private readonly prisma: PrismaService,
   ) {}
 
-  /** J6 : modèles en cache et état de la dernière synchronisation. */
+  /** BF-59 : modèles en cache et état de la dernière synchronisation. */
   @Get()
   async lister() {
     const modeles = await this.prisma.modeleActe.findMany({

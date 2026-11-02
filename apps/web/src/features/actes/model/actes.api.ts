@@ -102,7 +102,7 @@ export const actesApi = {
   urlApercu: (id: string) => `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1/actes/${id}/apercu`,
   urlPiece: (id: string, pieceId: string) => `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1/actes/${id}/pieces/${pieceId}`,
 
-  /** XMLHttpRequest plutôt que fetch : seul moyen d'afficher la progression de l'envoi (C5). */
+  /** XMLHttpRequest plutôt que fetch : seul moyen d'afficher la progression de l'envoi (BF-18). */
   envoyerPiece(id: string, fichier: File, progression: (pourcent: number) => void): Promise<Piece> {
     return new Promise((resoudre, rejeter) => {
       const xhr = new XMLHttpRequest();

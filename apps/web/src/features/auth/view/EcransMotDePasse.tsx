@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vues B5 : demande de lien, lien envoyé, nouveau mot de passe, lien expiré (BF-05).
+// MVVM — Vues du mot de passe oublié : demande, lien envoyé, nouveau mot de passe, lien expiré (BF-05).
 import { ArrowLeft, Check, Circle, MailCheck, Unlink } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';

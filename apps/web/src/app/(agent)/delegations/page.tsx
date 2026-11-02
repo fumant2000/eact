@@ -1,6 +1,6 @@
 import { ListeDelegations } from '@/features/delegations/view/Delegations';
 
-// F1 · /delegations
+// Délégations et intérims (BF-09, BF-10).
 export default function DelegationsPage() {
   return <ListeDelegations />;
 }

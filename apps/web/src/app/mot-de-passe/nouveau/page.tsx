@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { EcranNouveauMotDePasse } from '@/features/auth/view/EcransMotDePasse';
 
-// B5 · /mot-de-passe/nouveau?jeton=… (lien reçu par e-mail)
+// Nouveau mot de passe depuis le lien reçu par e-mail (BF-05).
 export default function NouveauMotDePassePage() {
   return (
     <Suspense>

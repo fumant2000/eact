@@ -1,7 +1,6 @@
 'use client';
 
-// Toasts (Sonner, guide d'implémentation §3) : erreurs inattendues et confirmations d'action.
-// Les erreurs de formulaire restent affichées à côté du champ ; le toast sert à ce qui n'a pas d'emplacement.
+// Toasts (Sonner) : erreurs sans emplacement et confirmations ; les erreurs de formulaire restent près du champ.
 import { useEffect } from 'react';
 import { toast, Toaster } from 'sonner';
 import { useT, type CleTraduction } from '@/i18n';

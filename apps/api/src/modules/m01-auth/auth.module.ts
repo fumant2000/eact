@@ -5,13 +5,7 @@ import { JwtGarde } from '../../common/security/securite';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
-/**
- * M01 — Authentification et sécurité
- * Exigences : BF-01 à BF-05 · Priorité : P0
- * Interface fournie : IAuthentification (connexion, TOTP, jetons)
- *
- * Global : la garde JWT protège toutes les routes de l'API ; AuthService est requis par M06 (RG-12).
- */
+/** M01 Authentification et sécurité — BF-01 à BF-05. Global : garde JWT sur toute l'API, AuthService utilisé par M06 (RG-12). */
 @Global()
 @Module({
   imports: [

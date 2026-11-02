@@ -1,6 +1,6 @@
 import { AdminGabarits } from '@/features/admin/view/Gabarits';
 
-// J6 · /admin/gabarits
+// Modèles et gabarits GitHub (BF-59).
 export default function Page() {
   return <AdminGabarits />;
 }

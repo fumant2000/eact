@@ -1,6 +1,6 @@
 'use client';
 
-// MVVM — Vues J1 (organigramme) et J2-J3 (comptes, rôles) : BF-06 à BF-08.
+// MVVM — Vues de l'organigramme, des comptes et des rôles (BF-06 à BF-08).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';

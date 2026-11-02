@@ -1,6 +1,6 @@
 import { DeclarerDelegation } from '@/features/delegations/view/Delegations';
 
-// F2 · /delegations/nouvelle
+// Déclarer une délégation (BF-09, BF-10).
 export default function NouvelleDelegationPage() {
   return <DeclarerDelegation />;
 }

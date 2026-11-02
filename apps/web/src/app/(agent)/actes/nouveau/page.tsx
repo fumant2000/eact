@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { NouvelActe } from '@/features/actes/view/NouvelActe';
 
-// C2–C3 · /actes/nouveau?etape=type|modele
+// Assistant « Nouvel acte » (UC-06).
 export default function NouvelActePage() {
   return (
     <Suspense>

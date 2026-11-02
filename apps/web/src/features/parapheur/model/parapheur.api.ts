@@ -66,7 +66,7 @@ export const parapheurApi = {
     }),
 };
 
-/** Badge d'échéance (DueBadge) : en retard, sous 24 h, ou J-n. */
+/** Badge d'échéance : en retard, sous 24 h, ou J-n. */
 export function etatEcheance(echeance: string | null, maintenant = Date.now()) {
   if (!echeance) return null;
   const ecart = new Date(echeance).getTime() - maintenant;

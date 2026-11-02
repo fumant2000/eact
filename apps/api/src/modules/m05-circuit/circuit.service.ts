@@ -10,7 +10,7 @@ export interface StructureChaine {
   id: string;
   code: string;
   libelle: string;
-  /** Codes de la racine vers la structure : ['SG', 'DAG'] → référence « …/MINESUP/SG/DAG ». */
+  /** Codes de la racine vers la structure (suffixe de la référence de l'acte). */
   chaine: string[];
 }
 
@@ -26,7 +26,7 @@ export interface DecisionDto {
   decision: DecisionVisa;
   version: number;
   observation?: string;
-  /** CORRECTION : 0 = retour à la rédaction, sinon ordre d'une étape déjà franchie (RG-06, maquette D4). */
+  /** CORRECTION : 0 = retour à la rédaction, sinon ordre d'une étape déjà franchie (RG-06). */
   etapeRetour?: number;
 }
 
@@ -34,12 +34,7 @@ type ActeCircuit = Prisma.ActeGetPayload<{ include: { etapeCourante: true; redac
 
 const nomComplet = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`;
 
-/**
- * IParapheur — M05 (BF-22 à BF-28 ; RG-04 à RG-07, RG-18, RG-19 ; UC-08).
- * Qui vise : les étapes « VISEUR » suivent la hiérarchie du rédacteur (1re étape → sa structure,
- * 2e → la structure parente…, jusqu'à la structure émettrice) ; les autres rôles (juriste, traducteur, SG)
- * reviennent à leurs titulaires. Un intérimaire déclaré (délégation INTERIM) vise à la place du titulaire.
- */
+/** M05 IParapheur — BF-22 à BF-28, RG-04 à RG-07, RG-18, RG-19. */
 @Injectable()
 export class CircuitService {
   constructor(
@@ -99,7 +94,7 @@ export class CircuitService {
 
   // ─────────── RG-04 : qui peut viser une étape ───────────
 
-  /** Titulaires de l'étape, rédacteur compris. */
+  /** Titulaires de l'étape, rédacteur compris ; hors étape « VISEUR », tous les porteurs du rôle. */
   private async titulaires(acte: Pick<ActeCircuit, 'redacteur' | 'structureId'>, etape: EtapeCircuit) {
     if (etape.roleRequis !== Role.VISEUR) {
       return this.prisma.utilisateur.findMany({ where: { actif: true, roles: { some: { role: etape.roleRequis } } }, include: { structure: true } });
@@ -120,6 +115,7 @@ export class CircuitService {
     });
   }
 
+  /** RG-04 : titulaires (hors rédacteur) et leurs intérimaires déclarés. */
   async viseursEligibles(acte: Pick<ActeCircuit, 'redacteurId' | 'redacteur' | 'structureId'>, etape: EtapeCircuit): Promise<Viseur[]> {
     const titulaires = (await this.titulaires(acte, etape)).filter((u) => u.id !== acte.redacteurId); // RG-19
     const maintenant = new Date();
@@ -144,7 +140,7 @@ export class CircuitService {
     return this.prisma.acte.findUnique({ where: { id }, include: { etapeCourante: true, redacteur: true, typeActe: true, pieces: true } });
   }
 
-  /** D8 : pourquoi le visa n'est pas proposé (null = l'agent peut viser). */
+  /** Pourquoi le visa n'est pas proposé (null = l'agent peut viser). */
   async raisonNonVisa(acte: ActeCircuit, u: UtilisateurConnecte): Promise<string | null> {
     if (acte.statut !== StatutActe.EN_CIRCUIT || !acte.etapeCourante) return 'HORS_CIRCUIT';
     if (acte.redacteurId === u.sub) return 'REDACTEUR'; // RG-19
@@ -157,7 +153,7 @@ export class CircuitService {
     return null;
   }
 
-  /** RG-15 : membres du circuit = ceux qui ont visé et les viseurs prévus de chaque étape (fiche D2 consultable en amont). */
+  /** RG-15 : membres du circuit = ceux qui ont visé et les viseurs prévus de chaque étape. */
   async estMembreDuCircuit(acteId: string, u: UtilisateurConnecte) {
     const acte = await this.chargerActe(acteId);
     if (!acte || acte.statut === StatutActe.BROUILLON) return false;
@@ -234,11 +230,8 @@ export class CircuitService {
   }
 
   /**
-   * Première étape, à partir de `etape`, que quelqu'un peut effectivement viser.
-   * RG-19 interdit au rédacteur de viser son propre acte : quand il est lui-même le titulaire d'une étape
-   * (un chef de service qui rédige), sa rédaction vaut son visa à ce niveau et l'étape est franchie d'office.
-   * Une étape sans aucun titulaire laisserait l'acte invisible de tous : refus explicite.
-   * Retourne null quand toutes les étapes restantes sont franchies (l'acte est alors prêt à signer).
+   * RG-19 : première étape visable depuis `etape` ; celles dont le rédacteur est titulaire sont franchies d'office.
+   * Étape sans aucun titulaire → 422 ; null si tout est franchi (prêt à signer).
    */
   async etapeAViser(acte: Pick<ActeCircuit, 'redacteurId' | 'redacteur' | 'structureId'>, etape: EtapeCircuit | null) {
     const franchies: EtapeCircuit[] = [];
@@ -297,8 +290,7 @@ export class CircuitService {
         if (!retour || retour.ordre >= etape.ordre) {
           throw new UnprocessableEntityException({ code: 'ETAPE_RETOUR_INVALIDE', message: 'Choisissez la rédaction ou une étape déjà franchie' });
         }
-        // Le circuit repart de cette étape : nouveau tour, le viseur concerné pourra viser à nouveau (RG-18).
-        // Une étape franchie d'office (le rédacteur en est le titulaire) renvoie à la suivante, au pire l'étape courante.
+        // Nouveau tour depuis l'étape choisie (RG-18) ; une étape franchie d'office renvoie à la suivante.
         const cible = (await this.etapeAViser(acte, retour)).etape ?? etape;
         donnees = { etapeCouranteId: cible.id, etapeEntreeLe: new Date(), tourCircuit: { increment: 1 } };
       }
@@ -310,7 +302,7 @@ export class CircuitService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      // Verrou optimiste (§14.2, figure 8) : 0 ligne modifiée → 409.
+      // Verrou optimiste : 0 ligne modifiée → 409.
       const { count } = await tx.acte.updateMany({ where: { id: acteId, version: dto.version }, data: { ...donnees, version: { increment: 1 } } });
       if (count === 0) throw new ConflictException({ code: 'CONFLIT_VERSION', message: "L'acte a été modifié entre-temps : rechargez-le" });
       await tx.visa.create({

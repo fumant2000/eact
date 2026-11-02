@@ -1,6 +1,6 @@
 'use client';
 
-// Éditeur de texte riche (BF-17) : TipTap (ProseMirror, licence MIT). Produit le HTML restreint que le serveur accepte.
+// Éditeur de texte riche (BF-17) avec TipTap ; produit le HTML restreint accepté par le serveur.
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Bold, Italic, List, Plus, Underline, Undo2 } from 'lucide-react';
@@ -81,7 +81,7 @@ export function BarreOutils({ editor }: { editor: Editor }) {
   );
 }
 
-/** Crée l'éditeur ; la vue place ensuite <BarreOutils> et <ZoneTexte> où le prévoit la maquette C4. */
+/** Crée l'éditeur ; la vue place ensuite <BarreOutils> et <ZoneTexte>. */
 export function useEditeurRiche(html: string, onChange: (html: string) => void, libelle: string) {
   return useEditor({
     extensions: [

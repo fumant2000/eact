@@ -49,7 +49,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 export const signatureApi = {
   aSigner: () => appelApi<ActeASigner[]>('/v1/signature'),
   etat: (id: string) => appelApi<EtatSignature>(`/v1/actes/${id}/signature`),
-  /** La même clé est renvoyée en cas de nouvel essai réseau : le serveur rend le même résultat (§16.3, TF-08). */
+  /** Même clé à chaque nouvel essai réseau : le serveur rejoue le même résultat (TF-08). */
   signer: (id: string, code: string, cle: string) =>
     appelApi<ResultatSignature>(`/v1/actes/${id}/signature`, { method: 'POST', json: { code }, headers: { 'Idempotency-Key': cle } }),
   urlPdf: (id: string) => `${API}/v1/actes/${id}/pdf`,

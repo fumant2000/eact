@@ -1,7 +1,6 @@
 'use client';
 
-// M13 — Vérification publique (UC-17, V-01 / V-02), mobile d'abord, sans connexion.
-// Les données sont chargées par le serveur (page) puis affichées ici, dans la langue choisie.
+// UC-17 — vérification publique (BF-55, BF-56), sans connexion ; données chargées par la page serveur.
 import { FileCheck2, FileX2, Search, ShieldCheck, ShieldX, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -29,8 +28,8 @@ function CadrePublic({ children }: { children: ReactNode }) {
   );
 }
 
-/** V-01 : saisie du code court. */
-export function SaisieCodeVerification({ codeInitial = '' }: { codeInitial?: string }) {
+/** Saisie du code court. */
+function SaisieCodeVerification({ codeInitial = '' }: { codeInitial?: string }) {
   const { t } = useT();
   const router = useRouter();
   const [code, setCode] = useState(codeInitial);
@@ -106,7 +105,7 @@ function ComparerPdf({ code }: { code: string }) {
   );
 }
 
-/** V-02 : résultat. Jamais le contenu d'un acte non public (RG-21). */
+/** Résultat : jamais le contenu d'un acte non public (RG-21). */
 export function PageResultat({ code, acte }: { code: string; acte: Verification | null }) {
   const { t, langue } = useT();
   if (!acte) {

@@ -1,12 +1,5 @@
 import { Module } from '@nestjs/common';
 
-/**
- * M09 — Archivage
- * Exigences : BF-44 à BF-47 · Priorité : P1
- * Interface fournie : IArchives
- *
- * Organisation interne : *.controller.ts → *.service.ts → *.repository.ts
- * Règle : n'importer d'un autre module que son interface ou ses événements.
- */
+/** M09 Archivage — BF-44 à BF-47 (P1, non commencé). */
 @Module({})
 export class ArchivageModule {}

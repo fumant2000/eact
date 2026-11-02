@@ -1,6 +1,6 @@
 'use client';
 
-// Coque de l'espace agent (composants AppHeader, AppSidebar, MobileTopBar de la maquette ; A1 tiroir mobile).
+// Coque de l'espace agent : en-tête, barre latérale, tiroir mobile.
 import {
   Archive,
   Bug,
@@ -39,7 +39,7 @@ interface EntreeMenu {
   cle: CleTraduction;
   icone: LucideIcon;
   roles?: string[]; // absent = tout utilisateur interne
-  bientot?: boolean; // hors P0 : entrée grisée (brief design)
+  bientot?: boolean; // hors P0 : entrée grisée
   compteur?: 'parapheur' | 'signature';
 }
 
@@ -64,7 +64,6 @@ const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
   },
   {
     cle: 'menu.administration',
-    // J1–J8 (organigramme, utilisateurs, types, circuits, gabarits) : itération suivante.
     entrees: [
       { href: '/admin/utilisateurs', cle: 'admin.utilisateurs', icone: Network, roles: ['ADMINISTRATEUR'] },
       { href: '/admin/circuits', cle: 'admin.circuits', icone: Workflow, roles: ['ADMINISTRATEUR'] },
@@ -161,7 +160,7 @@ export function Coque({ children }: { children: ReactNode }) {
   const demo = useModeDemo();
   const chemin = usePathname();
   useEffect(() => setTiroir(false), [chemin]);
-  // Mode concentration : l'éditeur d'acte masque la barre latérale (guide d'implémentation §5, point 3).
+  // Mode concentration : l'éditeur d'acte masque la barre latérale.
   const concentration = /^\/actes\/[^/]+\/edition$/.test(chemin);
 
   if (!session.profil) {
