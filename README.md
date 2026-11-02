@@ -3,20 +3,24 @@
 Cas d'étude : **Ministère de l'Enseignement Supérieur (MINESUP)** — Secrétariat Général et Direction des Affaires Générales (pilote) · ENSPD — UE Architecture Logicielle & Objets répartis.
 Référence : cahier des charges `EACT-CDC-001` v1.1.
 
-## Démarrage rapide (mode léger)
+## Démarrage rapide (une commande)
+
+Prérequis : Docker Desktop démarré.
 
 ```bash
-cp .env.example .env
-npm install
-npm run infra                      # postgres + redis + mailpit (Docker)
-npm run db:migrate && npm run db:seed
-npm run dev:api                    # http://localhost:3000/docs
-npm run dev:web                    # http://localhost:3001
+cp .env.example .env      # la première fois
+docker compose up -d      # construit, migre, charge les données de démo et démarre tout
 ```
 
-Mailpit (e-mails de dev) : http://localhost:8025. Comptes de démonstration, services optionnels et scénario
-de présentation : [docs/demarrage-local.md](docs/demarrage-local.md). Architecture complète conteneurisée :
-`docker compose --profile dev up -d --build` → http://localhost:8080.
+| URL | Service |
+|---|---|
+| http://localhost:8080 | Application (connexion en un clic dans le panneau « Mode démonstration ») |
+| http://localhost:8025 | Mailpit : tous les e-mails envoyés par EACT |
+| http://localhost:3000/docs | Swagger de l'API |
+
+Premier lancement : 5 à 10 minutes (construction des images) ; ensuite quelques secondes. Arrêt : `docker compose down`.
+Comptes, scénario de présentation, QR scanné par un téléphone et développement avec rechargement à chaud :
+[docs/demarrage-local.md](docs/demarrage-local.md).
 
 ## Pile
 

@@ -1,35 +1,45 @@
 # Démarrage local et démonstration
 
-Deux façons de lancer EACT :
+## 1. Démo complète : une seule commande
 
-| Mode | Pour quoi | Ce qui tourne | RAM approx. |
-|---|---|---|---|
-| **Léger** (par défaut) | Développement quotidien, démonstrations en séance | Docker : PostgreSQL, Redis, Mailpit · Poste : API et web (rechargement à chaud) | ~1 Go |
-| Complet | Montrer l'architecture cible (CDC §15), tester les images | Tous les conteneurs derrière nginx | 3 à 4 Go |
-
-## 1. Mode léger
-
-Prérequis : Node 22, Docker Desktop démarré.
+Prérequis : Docker Desktop démarré, 4 Go de RAM libres.
 
 ```bash
-cp .env.example .env        # la première fois ; changer les secrets si besoin
+cp .env.example .env      # la première fois (vérifier DEMO_MODE=true)
+docker compose up -d
+```
+
+Cette commande construit les images (5 à 10 minutes la première fois, quelques secondes ensuite), applique
+les migrations, charge les données de démonstration (organigramme, types, circuits, gabarits, comptes) et
+démarre l'architecture complète derrière nginx :
+
+| URL | Service |
+|---|---|
+| http://localhost:8080 | Application |
+| http://localhost:8025 | Mailpit : tous les e-mails envoyés par EACT arrivent ici, aucun ne sort |
+| http://localhost:3000/docs | Swagger de l'API |
+
+`docker compose up -d` reconstruit automatiquement ce qui a changé dans le code. Arrêt : `docker compose down`
+(les données restent ; `docker compose down -v` efface aussi la base et les fichiers).
+Suivre les journaux : `docker compose logs -f api web`.
+
+## 1 bis. Développement avec rechargement à chaud (mode léger)
+
+Pour coder : seuls PostgreSQL, Redis et Mailpit tournent dans Docker, l'API et le web sur le poste.
+Arrêter d'abord la démo complète (`docker compose down`), qui occupe les mêmes ports.
+
+```bash
 npm install
 npm run infra               # postgres + redis + mailpit (Docker)
-npm run infra:pdf           # gotenberg : PDF/A des actes signés (~1 Go de RAM, à lancer pour la signature)
+npm run infra:pdf           # gotenberg : PDF/A des actes signés (pour la signature)
 npm run db:migrate          # applique les migrations Prisma
-npm run db:seed             # organigramme, types d'actes, circuit NS, gabarits, comptes de démo
+npm run db:seed             # organigramme, types d'actes, circuits, gabarits, comptes de démo
 npm run dev:api             # terminal 1 → http://localhost:3000/docs (Swagger)
 npm run dev:web             # terminal 2 → http://localhost:3001
 ```
 
-| URL | Service |
-|---|---|
-| http://localhost:3001 | Application (le web relaie `/api` vers l'API, comme nginx en production) |
-| http://localhost:3000/docs | Swagger de l'API |
-| http://localhost:8025 | Mailpit : tous les e-mails envoyés par EACT arrivent ici, aucun ne sort |
-
 Repartir d'une base propre : `npm run db:reset` (**efface toutes les données** de la base locale, puis rejoue
-migrations et seed). Arrêter les conteneurs : `npm run infra:down`.
+migrations et seed).
 
 ## 2. Services : lesquels sont lancés, et à quoi servent les autres
 
@@ -72,6 +82,8 @@ aucun téléphone n'est nécessaire.
 « Saisir une clé de configuration » → clé `JBSWY3DPEHPK3PXP`, type « basé sur l'heure ».
 
 ## 4. Scénario de démonstration (état actuel : M01, M04, M05, M06, M10, M13)
+
+Adresses : http://localhost:8080 en démo complète, http://localhost:3001 en mode léger.
 
 1. **Connexion et rôles** : se connecter en rédactrice → « Mon travail » n'affiche que ses entrées de menu.
 2. **Verrouillage (BF-03)** : 5 mauvais mots de passe sur Daniel FOTSO → message « il vous reste n essais »,
@@ -116,17 +128,21 @@ aucun téléphone n'est nécessaire.
 
 ### Faire scanner le QR par un téléphone de la salle
 
-Le QR contient `WEB_URL`. Par défaut `http://localhost:3001`, injoignable depuis un téléphone. Avant la démo :
+Le QR contient l'adresse publique de l'application (`PUBLIC_BASE_URL` en démo complète, `WEB_URL` en mode
+léger), par défaut `localhost`, injoignable depuis un téléphone. Avant la démo :
 1. relever l'adresse du PC sur le réseau de la salle (`ipconfig` → « Adresse IPv4 », ex. `192.168.1.20`) ;
-2. dans `.env`, mettre `WEB_URL=http://192.168.1.20:3001`, puis relancer `npm run dev:api` ;
+2. dans `.env`, mettre `PUBLIC_BASE_URL=http://192.168.1.20:8080` puis `docker compose up -d`
+   (en mode léger : `WEB_URL=http://192.168.1.20:3001` puis relancer `npm run dev:api`) ;
 3. autoriser Node.js dans le pare-feu Windows (réseau privé) à la première demande ;
 4. les actes signés **après** ce changement portent la bonne adresse (le QR est imprimé dans le PDF).
 
-## 5. Mode complet
+## 5. Options du mode complet
 
-```bash
-docker compose --profile dev up -d --build    # http://localhost:8080 (nginx)
-```
+- Antivirus réel : `ANTIVIRUS_CONTENEURS=clamav` dans `.env`, puis `docker compose --profile antivirus up -d`
+  (~1 Go de RAM, signatures téléchargées au démarrage).
+- Supervision : `docker compose --profile obs up -d` (Prometheus, Grafana, Loki).
+- Production : `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` (ClamAV réel, mode démo
+  et Mailpit retirés, deux instances de l'API, réplica PostgreSQL, sauvegardes).
 
 Dans les conteneurs, les adresses des services (postgres, mailpit, gotenberg…) sont fixées dans
 `docker-compose.yml` ; le `.env` ne décrit que le poste du développeur.

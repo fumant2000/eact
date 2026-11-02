@@ -10,16 +10,18 @@
     "node": ">=22"
   },
   "scripts": {
-    "infra": "docker compose --profile dev up -d postgres redis mailpit",
+    "demo": "docker compose up -d",
+    "demo:logs": "docker compose logs -f api web",
+    "infra": "docker compose up -d postgres redis mailpit",
     "infra:pdf": "docker compose up -d gotenberg",
-    "infra:down": "docker compose --profile dev --profile obs down",
+    "infra:down": "docker compose --profile antivirus --profile obs down",
     "dev:api": "npm run start:dev -w @eact/api",
     "dev:web": "npm run dev -w @eact/web",
     "db:migrate": "npm run prisma:migrate -w @eact/api",
     "db:seed": "npm run prisma:seed -w @eact/api",
     "db:reset": "npm run prisma:reset -w @eact/api",
-    "dev": "docker compose --profile dev up -d --build",
-    "down": "docker compose --profile dev --profile obs down",
+    "dev": "docker compose up -d",
+    "down": "docker compose --profile antivirus --profile obs down",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run build -w @eact/shared && npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
