@@ -107,6 +107,13 @@ aucun téléphone n'est nécessaire.
 12. **Vérification publique (M13)** : scanner le QR avec un téléphone → page « Acte authentique », sans compte.
     Déposer le PDF reçu : « identique ». Modifier le PDF (même un caractère) et le redéposer : « modifié ».
 
+13. **Paramétrage sans code (ENF-08)** : entrer comme Hervé TCHAMBA (administrateur) → Administration →
+    Types et circuits → « Créer un circuit » pour l'arrêté ministériel (AM) à la DAG → se reconnecter en
+    rédactrice : l'arrêté est désormais proposé dans « Nouvel acte ».
+14. **Délégation (BF-09)** : entrer comme Roger ESSOMBA (Ministre) → Délégations → « Déclarer une délégation »
+    → délégataire, période, types couverts → confirmer avec le code (affiché en mode démo). Le bandeau de
+    délégation apparaît chez le délégataire, et les actes de ces types arrivent dans son « À signer ».
+
 ### Faire scanner le QR par un téléphone de la salle
 
 Le QR contient `WEB_URL`. Par défaut `http://localhost:3001`, injoignable depuis un téléphone. Avant la démo :

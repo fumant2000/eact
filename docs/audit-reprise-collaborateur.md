@@ -101,12 +101,32 @@ Volume : backend 1 231 lignes (5 modules, 18 routes) ; frontend ~2 000 lignes (7
   et tests unitaires ajoutés. Les entrées écrites avant la correction restent fausses : remettre la base de dev à
   zéro (`npm run db:reset`).
 
-## 7. Suite du P0 (ordre proposé)
+## 7. État du P0 (2 novembre 2026)
 
-1. ~~M04 Rédaction~~ : fait (voir ci-dessus). Restent BF-20 versions et comparaison (C8) et l'aperçu PDF.
-2. **M05 Parapheur** (D1 → D8) : file par rôle et structure, viser / corriger / rejeter, verrou optimiste (409).
-3. **M06 Signature** (E1 → E6) : TOTP de moins de 5 min (RG-12), séquenceur déjà écrit (`signature.service.ts`),
-   idempotence, PDF/A par Gotenberg + QR + SHA-256.
-4. **M13 Vérification publique** (V-01, V-02) : cible du QR.
-5. **M02 Délégations** (F1, F2) et administration minimale (J1 → J5).
-6. Mise en place de **shadcn/ui** (les primitives actuelles en reprennent déjà l'API) et tests unitaires Jest de M01.
+Le fil rouge de la démonstration (backlog) est réalisé de bout en bout : rédiger une note de service → visas
+du chef de service, du directeur et du SG → signature avec code TOTP → `N° 26/0001/NS/MINESUP/SG/DAG` → PDF/A
+avec QR → page publique « Acte authentique » → journal d'audit vérifiable.
+
+| Module | Exigences P0 | État | Recette |
+|---|---|---|---|
+| M01 Authentification | BF-01 à BF-05, enrôlement TOTP | Fait | 29 contrôles |
+| M02 Organisation | BF-06 à BF-10 (délégations, intérim, comptes, organigramme) | Fait | 16 + 22 contrôles |
+| M04 Rédaction | BF-15 à BF-18, BF-21, BF-22, R-06 aperçu | Fait | 32 contrôles |
+| M05 Parapheur | BF-22 à BF-26, BF-28, RG-04 à RG-07, RG-18, RG-19 | Fait | 31 contrôles |
+| M06 Signature | BF-29 à BF-33, RG-08 à RG-12, TF-07, TF-08 | Fait | 26 contrôles |
+| M10 Audit | BF-48 à BF-50, TF-13 | Fait | tests unitaires + recettes |
+| M13 Vérification | BF-55, BF-56 (+ BF-57 avancé) | Fait | dans la recette M06 |
+| M14 GitHub | BF-59, RG-23 | Fait (synchronisation testée avec un faux GitHub) | 3 tests unitaires |
+| M15 Paramétrage | BF-64, BF-65, ENF-08 | Fait | dans les 22 contrôles d'administration |
+| M12 Notifications | BF-54 e-mail (avancé de P2 pour la démo) | Fait (envoi direct, sans file) | dans la recette M05 |
+
+### Reste à faire, par priorité
+
+1. **Avant toute démonstration** : `npm run db:reset` (la base de dev contient les données des recettes, dont
+   ~100 actes signés de test, et des entrées d'audit antérieures à la correction de l'empreinte).
+2. **P1** : BF-20 versions et comparaison (C8), BF-27 délais et relances (RG-20), M08 recherche, M09 archivage,
+   BF-60 à BF-63 (historique des gabarits, anomalies, webhooks), BF-66 paramètres chiffrés, BF-05 déjà fait.
+3. **Architecture cible** : passer PDF/A, e-mails et appels GitHub par les files BullMQ du worker (aujourd'hui
+   exécutés dans l'API en mode léger) ; vérifier le mode complet conteneurisé de bout en bout.
+4. **Qualité** : shadcn/ui (les primitives en reprennent l'API), tests Playwright des parcours, couverture Jest
+   des services métier (ENF-07 : 70 %), passage des recettes manuelles en tests d'intégration versionnés.
