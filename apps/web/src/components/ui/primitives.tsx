@@ -17,23 +17,20 @@ const VARIANTES = {
 } as const;
 const TAILLES = { sm: 'h-8 px-3 text-sm', default: 'h-10 px-4', lg: 'h-12 px-6 text-base' } as const;
 
-export function Button({
-  variant = 'default',
-  size = 'default',
-  className,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof VARIANTES; size?: keyof typeof TAILLES }) {
-  return (
-    <button
-      className={cx(
-        'inline-flex min-h-11 items-center justify-center gap-2 rounded-md font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 sm:min-h-0',
-        TAILLES[size],
-        VARIANTES[variant],
-        className,
-      )}
-      {...props}
-    />
+type OptionsBouton = { variant?: keyof typeof VARIANTES; size?: keyof typeof TAILLES; className?: string };
+
+/** Classes d'un bouton, pour styler aussi un lien de navigation (pas de <button> dans un <a>). */
+export function classesBouton({ variant = 'default', size = 'default', className }: OptionsBouton = {}) {
+  return cx(
+    'inline-flex min-h-11 items-center justify-center gap-2 rounded-md font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 sm:min-h-0',
+    TAILLES[size],
+    VARIANTES[variant],
+    className,
   );
+}
+
+export function Button({ variant, size, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & OptionsBouton) {
+  return <button className={classesBouton({ variant, size, className })} {...props} />;
 }
 
 export function Input({ className, invalide, ...props }: InputHTMLAttributes<HTMLInputElement> & { invalide?: boolean }) {

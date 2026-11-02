@@ -16,8 +16,20 @@ const HASH_ORIGINE = '0'.repeat(64);
 // pg_advisory_xact_lock : une seule insertion à la fois pour garder l'ordre de la chaîne (ADR 0004)
 const VERROU_CHAINE = 4242;
 
-function calculerHash(hashPrecedent: string, e: EntreeAudit, horodatage: Date): string {
-  const contenu = JSON.stringify([
+/**
+ * JSON canonique : clés triées à tous les niveaux. Indispensable car `details` est stocké en jsonb,
+ * et PostgreSQL réordonne les clés : sans cela, l'empreinte relue ne correspondrait plus à celle écrite.
+ */
+export function jsonCanonique(valeur: unknown): string {
+  return JSON.stringify(valeur, (_cle, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  );
+}
+
+export function calculerHash(hashPrecedent: string, e: EntreeAudit, horodatage: Date): string {
+  const contenu = jsonCanonique([
     hashPrecedent,
     horodatage.toISOString(),
     e.acteurId ?? null,

@@ -138,3 +138,30 @@ body {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* Corps des actes (éditeur, aperçu, PDF) : typographie des documents officiels */
+.corps-acte {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.corps-acte p {
+  margin: 0 0 0.75em;
+  text-align: justify;
+}
+.corps-acte h2,
+.corps-acte h3 {
+  margin: 1em 0 0.5em;
+  font-weight: 700;
+  text-align: center;
+}
+.corps-acte ul {
+  margin: 0 0 0.75em 1.5em;
+  list-style: disc;
+}
+.corps-acte ol {
+  margin: 0 0 0.75em 1.5em;
+  list-style: decimal;
+}
+.corps-acte:focus {
+  outline: none;
+}

@@ -216,16 +216,19 @@ model TypeActe {
 
 /// Gabarit versionné dans GitHub, servi depuis ce cache (RG-23).
 model ModeleActe {
-  id           String   @id @default(uuid()) @db.Uuid
-  typeActeId   String   @map("type_acte_id") @db.Uuid
-  langue       Langue
-  libelle      String
-  cheminGithub String   @map("chemin_github")
-  commitSha    String   @map("commit_sha")
-  contenuCache String   @map("contenu_cache") @db.Text
-  misAJourLe   DateTime @updatedAt @map("mis_a_jour_le")
-  typeActe     TypeActe @relation(fields: [typeActeId], references: [id])
-  actes        Acte[]
+  id                String   @id @default(uuid()) @db.Uuid
+  typeActeId        String   @map("type_acte_id") @db.Uuid
+  langue            Langue
+  libelle           String
+  cheminGithub      String   @map("chemin_github")
+  commitSha         String   @map("commit_sha")
+  version           String   @default("1.0") // étiquette affichée (v2.3), tirée du dépôt de gabarits
+  description       String?
+  ampliationsDefaut String[] @default([]) @map("ampliations_defaut") // BF-16
+  contenuCache      String   @map("contenu_cache") @db.Text
+  misAJourLe        DateTime @updatedAt @map("mis_a_jour_le")
+  typeActe          TypeActe @relation(fields: [typeActeId], references: [id])
+  actes             Acte[]
 
   @@unique([typeActeId, langue, cheminGithub])
   @@map("modele_acte")
@@ -342,6 +345,7 @@ model Piece {
   cheminObjet     String        @map("chemin_objet")
   empreinteSha256 String?       @map("empreinte_sha256")
   statutAnalyse   StatutAnalyse @default(EN_ATTENTE) @map("statut_analyse") // RG-24
+  motifRejet      String?       @map("motif_rejet") // filtre qui a refusé la pièce
   creeLe          DateTime      @default(now()) @map("cree_le")
   acte            Acte          @relation(fields: [acteId], references: [id])
 

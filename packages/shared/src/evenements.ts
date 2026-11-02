@@ -4,6 +4,7 @@
  */
 export const EVENEMENTS = {
   ACTE_CREE: 'acte.cree',
+  ACTE_SUPPRIME: 'acte.supprime',
   ACTE_SOUMIS: 'acte.soumis',
   ACTE_VISE: 'acte.vise',
   ACTE_A_CORRIGER: 'acte.a_corriger',

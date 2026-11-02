@@ -47,83 +47,120 @@ async function main() {
     { code: 'C', libelle: 'Communiqué', modePublicite: ModePublicite.SITE_ET_PRESSE, dureeConservationAnnees: 10 },
     { code: 'ATT', libelle: 'Attestation / certificat', modePublicite: ModePublicite.REMISE, dureeConservationAnnees: 5 },
   ];
+  // RG-03 : champs exigés à la soumission, paramétrables par type (BF-64).
+  const AVEC_AMPLIATION = ['NS', 'D', 'ATT', 'CIR'];
   for (const t of types) {
+    const champsObligatoires = AVEC_AMPLIATION.includes(t.code) ? ['objet', 'contenu', 'ampliation'] : ['objet', 'contenu'];
     await prisma.typeActe.upsert({
       where: { code: t.code },
-      update: {},
-      create: { ...t, champsObligatoires: ['objet', 'contenu'] },
+      update: { champsObligatoires },
+      create: { ...t, champsObligatoires },
     });
   }
+  const typeParCode = async (code: string) => prisma.typeActe.findUniqueOrThrow({ where: { code } });
+  const ns = await typeParCode('NS');
+  const d = await typeParCode('D');
+  const att = await typeParCode('ATT');
 
-  // Circuit observé pour une note de service (CDC tableau 3) : chef de service → directeur → SG.
-  const ns = await prisma.typeActe.findUniqueOrThrow({ where: { code: 'NS' } });
-  await prisma.circuitValidation.upsert({
-    where: { typeActeId_structureId: { typeActeId: ns.id, structureId: dag.id } },
-    update: {},
-    create: {
-      typeActeId: ns.id,
-      structureId: dag.id,
-      etapes: {
-        create: [
-          { ordre: 1, libelle: 'Visa du chef de service', roleRequis: Role.VISEUR, delaiHeures: 48 },
-          { ordre: 2, libelle: 'Visa du directeur', roleRequis: Role.VISEUR, delaiHeures: 48 },
-          { ordre: 3, libelle: 'Visa du Secrétaire Général', roleRequis: Role.SECRETAIRE_GENERAL, delaiHeures: 48 },
-        ],
-      },
-    },
-  });
-
-  // Gabarits (cache de eact-gabarits, RG-23) — le contenu réel viendra du dépôt GitHub (BF-59).
-  const d = await prisma.typeActe.findUniqueOrThrow({ where: { code: 'D' } });
-  const gabarits = [
+  // Circuits observés (CDC tableau 3, à confirmer à l'entretien), émis par la DAG. La signature suit la dernière étape.
+  const circuits = [
     {
       typeActeId: ns.id,
-      libelle: 'Note de service standard DAG',
-      cheminGithub: 'fr/note-de-service.md',
-      contenuCache: [
-        'RÉPUBLIQUE DU CAMEROUN — Paix – Travail – Patrie',
-        "MINISTÈRE DE L'ENSEIGNEMENT SUPÉRIEUR",
-        'SECRÉTARIAT GÉNÉRAL — DIRECTION DES AFFAIRES GÉNÉRALES',
-        '',
-        'NOTE DE SERVICE N° [attribuée à la signature]',
-        'portant {{objet}}',
-        '',
-        "Il est porté à la connaissance de l'ensemble du personnel que…",
-        '',
-        'Article 1er. …',
-        'Article 2. Les responsables veillent à la stricte exécution de la présente note de service.',
-      ].join('\n'),
+      etapes: [
+        { ordre: 1, libelle: 'Visa du chef de service', roleRequis: Role.VISEUR, delaiHeures: 48 },
+        { ordre: 2, libelle: 'Visa du directeur', roleRequis: Role.VISEUR, delaiHeures: 48 },
+        { ordre: 3, libelle: 'Visa du Secrétaire Général', roleRequis: Role.SECRETAIRE_GENERAL, delaiHeures: 48 },
+      ],
     },
     {
       typeActeId: d.id,
-      libelle: 'Décision portant affectation de personnel',
-      cheminGithub: 'fr/decision-affectation.md',
-      contenuCache: [
-        'RÉPUBLIQUE DU CAMEROUN — Paix – Travail – Patrie',
-        "MINISTÈRE DE L'ENSEIGNEMENT SUPÉRIEUR",
-        '',
-        'DÉCISION N° [attribuée à la signature]',
-        "portant affectation d'un agent au Service du Personnel",
-        '',
-        "LE MINISTRE DE L'ENSEIGNEMENT SUPÉRIEUR,",
-        '',
-        'Vu la Constitution ;',
-        "Vu le décret n° 2012/433 du 1er octobre 2012 portant organisation du Ministère de l'Enseignement Supérieur ;",
-        '',
-        'DÉCIDE :',
-        '',
-        'Article 1er. Madame / Monsieur {{agent}} est affecté(e) au Service du Personnel.',
-        'Article 2. La présente décision prend effet à compter de la date de prise de service.',
-      ].join('\n'),
+      etapes: [
+        { ordre: 1, libelle: 'Visa du chef de service', roleRequis: Role.VISEUR, delaiHeures: 48 },
+        { ordre: 2, libelle: 'Visa du directeur', roleRequis: Role.VISEUR, delaiHeures: 48 },
+        { ordre: 3, libelle: 'Contrôle de régularité (Division des Affaires Juridiques)', roleRequis: Role.JURISTE, delaiHeures: 72 },
+        { ordre: 4, libelle: 'Visa du Secrétaire Général', roleRequis: Role.SECRETAIRE_GENERAL, delaiHeures: 48 },
+      ],
+    },
+    {
+      typeActeId: att.id,
+      etapes: [
+        { ordre: 1, libelle: 'Visa du chef de service', roleRequis: Role.VISEUR, delaiHeures: 24 },
+        { ordre: 2, libelle: 'Visa du Secrétaire Général', roleRequis: Role.SECRETAIRE_GENERAL, delaiHeures: 24 },
+      ],
     },
   ];
-  for (const g of gabarits) {
-    await prisma.modeleActe.upsert({
-      where: { typeActeId_langue_cheminGithub: { typeActeId: g.typeActeId, langue: Langue.FR, cheminGithub: g.cheminGithub } },
+  for (const c of circuits) {
+    await prisma.circuitValidation.upsert({
+      where: { typeActeId_structureId: { typeActeId: c.typeActeId, structureId: dag.id } },
       update: {},
-      create: { ...g, langue: Langue.FR, commitSha: 'seed' },
+      create: { typeActeId: c.typeActeId, structureId: dag.id, etapes: { create: c.etapes } },
     });
   }
+
+  // Gabarits (cache de eact-gabarits, RG-23) : corps de l'acte seulement, en HTML ; l'en-tête officiel,
+  // le titre et le bloc de signature sont générés par EACT selon le type et la structure (BF-16).
+  const gabarits = [
+    {
+      typeActeId: ns.id,
+      libelle: 'Note de service · standard DAG',
+      description: 'Préambule libre, articles numérotés, ampliation interne.',
+      version: '2.3',
+      cheminGithub: 'fr/note-de-service.html',
+      ampliationsDefaut: ['SG', 'Toutes directions', 'Archives / Chrono'],
+      contenuCache:
+        "<p>Il est porté à la connaissance de l'ensemble du personnel que …</p>" +
+        '<p><strong>Article 1er.</strong> …</p>' +
+        '<p><strong>Article 2.</strong> Les responsables de structure veillent à la stricte application de la présente note de service.</p>',
+    },
+    {
+      typeActeId: ns.id,
+      libelle: 'Note de service · permanence et roulement',
+      description: 'Organisation d’une permanence ; tableau des agents en pièce jointe.',
+      version: '1.1',
+      cheminGithub: 'fr/note-de-service-permanence.html',
+      ampliationsDefaut: ['SG', 'DAG', 'SDACL', 'Intéressés', 'Archives / Chrono'],
+      contenuCache:
+        '<p>Il est porté à la connaissance du personnel qu’une permanence est organisée du … au …, selon le tableau joint.</p>' +
+        '<p><strong>Article 1er.</strong> Les agents désignés assurent la permanence aux heures ouvrables.</p>' +
+        '<p><strong>Article 2.</strong> Les chefs de service veillent à la stricte application de la présente note de service.</p>',
+    },
+    {
+      typeActeId: d.id,
+      libelle: 'Décision · affectation de personnel',
+      description: 'Visas réglementaires, dispositif en articles, notification à l’intéressé.',
+      version: '2.0',
+      cheminGithub: 'fr/decision-affectation.html',
+      ampliationsDefaut: ['Intéressé(e)', 'DAG', 'Service du Personnel', 'Archives / Chrono'],
+      contenuCache:
+        '<p><strong>LE MINISTRE DE L’ENSEIGNEMENT SUPÉRIEUR,</strong></p>' +
+        '<p>Vu la Constitution ;</p>' +
+        '<p>Vu le décret n° 2012/433 du 1er octobre 2012 portant organisation du Ministère de l’Enseignement Supérieur ;</p>' +
+        '<p><strong>DÉCIDE :</strong></p>' +
+        '<p><strong>Article 1er.</strong> Madame / Monsieur … est affecté(e) au Service du Personnel.</p>' +
+        '<p><strong>Article 2.</strong> La présente décision prend effet à compter de la date de prise de service de l’intéressé(e).</p>',
+    },
+    {
+      typeActeId: att.id,
+      libelle: 'Attestation · présence effective',
+      description: 'Constatation de présence au poste ; remise à l’agent demandeur.',
+      version: '1.0',
+      cheminGithub: 'fr/attestation-presence.html',
+      ampliationsDefaut: ['Intéressé(e)', 'Archives / Chrono'],
+      contenuCache:
+        '<p>Je soussigné, Secrétaire Général du Ministère de l’Enseignement Supérieur, atteste que Madame / Monsieur …, matricule …, est en service effectif au … depuis le ….</p>' +
+        '<p>En foi de quoi la présente attestation lui est délivrée pour servir et valoir ce que de droit.</p>',
+    },
+  ];
+  for (const { typeActeId, cheminGithub, ...g } of gabarits) {
+    // Le cache est rafraîchi à chaque seed (comme une synchronisation GitHub, BF-59).
+    await prisma.modeleActe.upsert({
+      where: { typeActeId_langue_cheminGithub: { typeActeId, langue: Langue.FR, cheminGithub } },
+      update: { ...g, commitSha: 'seed' },
+      create: { typeActeId, cheminGithub, ...g, langue: Langue.FR, commitSha: 'seed' },
+    });
+  }
+  // Anciens gabarits du premier seed (en-tête dans le texte) : retirés s'ils ne servent à aucun acte.
+  await prisma.modeleActe.deleteMany({ where: { cheminGithub: { endsWith: '.md' }, actes: { none: {} } } });
 
   if (process.env.NODE_ENV === 'production') return;
 
