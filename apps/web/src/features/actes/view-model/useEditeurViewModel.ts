@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ErreurApi } from '@/lib/api';
+import { notifierErreur, notifierSucces } from '@/lib/notifications';
 import { actesApi, EXTENSIONS_ACCEPTEES, TAILLE_MAX, type Acte, type Brouillon } from '../model/actes.api';
 
 export type EtatEnregistrement = 'enregistre' | 'enAttente' | 'enCours' | 'erreur' | 'conflit';
@@ -81,6 +82,7 @@ export function useEditeurViewModel(id: string) {
           aEnvoyer.current = { ...champs, ...aEnvoyer.current }; // rien n'est perdu : nouvel essai à la prochaine saisie
           setErreurEnregistrement(e instanceof Error ? e.message : String(e));
           setEtat('erreur');
+          notifierErreur(e);
         }
       } finally {
         envoiEnCours.current = null;
@@ -142,12 +144,20 @@ export function useEditeurViewModel(id: string) {
           await client.invalidateQueries({ queryKey: ['acte', id] });
           setEnvois((l) => l.filter((e) => e.cle !== cle));
         })
-        .catch((e: Error) => majEnvoi(cle, { refus: { motif: 'serveur', message: e.message } }));
+        .catch((e: Error) => {
+          majEnvoi(cle, { refus: { motif: 'serveur', message: e.message } });
+          notifierErreur(e);
+        });
     }
   };
   const retirerEnvoi = (cle: string) => setEnvois((l) => l.filter((e) => e.cle !== cle));
   const retirerPiece = async (pieceId: string) => {
-    await actesApi.supprimerPiece(id, pieceId);
+    try {
+      await actesApi.supprimerPiece(id, pieceId);
+      notifierSucces('toast.pieceRetiree');
+    } catch (e) {
+      notifierErreur(e);
+    }
     await client.invalidateQueries({ queryKey: ['acte', id] });
   };
 
@@ -174,6 +184,7 @@ export function useEditeurViewModel(id: string) {
     } catch (e) {
       setErreurAction(e instanceof Error ? e.message : String(e));
       setConfirmation(null);
+      notifierErreur(e);
     } finally {
       setActionEnCours(false);
     }
@@ -203,6 +214,7 @@ export function useEditeurViewModel(id: string) {
     soumettre: () =>
       executer(async () => {
         await actesApi.soumettre(id, version.current);
+        notifierSucces('toast.soumis');
         await client.invalidateQueries({ queryKey: ['mes-actes'] });
         router.push('/mes-actes?soumis=1');
       }),
@@ -210,6 +222,7 @@ export function useEditeurViewModel(id: string) {
     supprimer: () =>
       executer(async () => {
         await actesApi.supprimer(id);
+        notifierSucces('toast.supprime');
         await client.invalidateQueries({ queryKey: ['mes-actes'] });
         router.push('/mes-actes');
       }),

@@ -245,5 +245,17 @@
   "soumission.texte": "The draft will no longer be editable unless an approver sends it back for correction.",
   "soumission.continuer": "Keep drafting",
   "supprimer.titre": "Delete this draft?",
-  "supprimer.texte": "“{objet}” and its {n} attachment(s) will be permanently deleted."
+  "supprimer.texte": "“{objet}” and its {n} attachment(s) will be permanently deleted.",
+  "erreur.RESEAU": "The EACT server is not responding. Check your connection; unsaved input stays on the page.",
+  "erreur.ERREUR_INTERNE": "Internal server error. If it happens again, report it to IT with reference {ref}.",
+  "erreur.SESSION_EXPIREE": "Your session has expired. Please sign in again.",
+  "erreur.ACCES_REFUSE": "You are not allowed to do this.",
+  "erreur.INTROUVABLE": "Item not found: it may have been deleted.",
+  "erreur.TROP_VOLUMINEUX": "File too large: 20 MB maximum.",
+  "erreur.DONNEES_INVALIDES": "Some entered data is invalid.",
+  "erreur.TROP_DE_REQUETES": "Too many attempts. Please wait a moment.",
+  "erreur.INCONNUE": "An unexpected error occurred.",
+  "toast.soumis": "Draft submitted to the approval workflow.",
+  "toast.supprime": "Draft deleted.",
+  "toast.pieceRetiree": "Attachment removed."
 }

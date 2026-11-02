@@ -5,6 +5,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { FiltreErreurs } from './common/errors/filtre-erreurs';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -12,6 +13,7 @@ async function bootstrap() {
   app.set('trust proxy', 1); // IP réelle derrière nginx / le proxy Next (journal d'audit)
   app.use(cookieParser());
   // DTO validés et nettoyés : champs inconnus refusés (CDC tableau 24, injection)
+  app.useGlobalFilters(new FiltreErreurs());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
 
   // Contrat d'interface front/back (ENF-09) : http://localhost:3000/docs

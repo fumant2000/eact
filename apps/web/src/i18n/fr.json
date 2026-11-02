@@ -245,5 +245,17 @@
   "soumission.texte": "Le projet ne sera plus modifiable, sauf si un viseur vous le renvoie pour correction.",
   "soumission.continuer": "Continuer la rédaction",
   "supprimer.titre": "Supprimer ce brouillon ?",
-  "supprimer.texte": "« {objet} » et ses {n} pièce(s) jointe(s) seront supprimés définitivement."
+  "supprimer.texte": "« {objet} » et ses {n} pièce(s) jointe(s) seront supprimés définitivement.",
+  "erreur.RESEAU": "Le serveur EACT ne répond pas. Vérifiez votre connexion ; vos saisies non enregistrées restent dans la page.",
+  "erreur.ERREUR_INTERNE": "Erreur interne du serveur. Si elle se répète, signalez-la à la DSI avec la référence {ref}.",
+  "erreur.SESSION_EXPIREE": "Votre session a expiré. Reconnectez-vous.",
+  "erreur.ACCES_REFUSE": "Vous n'avez pas les droits pour cette action.",
+  "erreur.INTROUVABLE": "Élément introuvable : il a peut-être été supprimé.",
+  "erreur.TROP_VOLUMINEUX": "Fichier trop volumineux : 20 Mo maximum.",
+  "erreur.DONNEES_INVALIDES": "Certaines données saisies sont invalides.",
+  "erreur.TROP_DE_REQUETES": "Trop de tentatives. Patientez quelques instants.",
+  "erreur.INCONNUE": "Une erreur inattendue est survenue.",
+  "toast.soumis": "Projet soumis au circuit de validation.",
+  "toast.supprime": "Brouillon supprimé.",
+  "toast.pieceRetiree": "Pièce jointe retirée."
 }

@@ -13,7 +13,7 @@ const RAFRAICHIR_TOUTES_MS = 10 * 60_000; // jeton d'accès de 15 min, renouvel�
 
 /** Lecture seule du profil connecté (pour les pages). */
 export function useProfil() {
-  return useQuery({ queryKey: ['session'], queryFn: authApi.profil, retry: false, staleTime: 5 * 60_000 });
+  return useQuery({ queryKey: ['session'], queryFn: authApi.profil, retry: false, staleTime: 5 * 60_000, meta: { silencieux: true } });
 }
 
 /** Session complète : à n'utiliser qu'une fois, dans la coque (un seul minuteur d'inactivité). */

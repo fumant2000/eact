@@ -25,19 +25,25 @@ export function rafraichirSession(): Promise<boolean> {
 
 export async function appelApi<T>(chemin: string, init: RequestInit & { json?: unknown } = {}, reessai = true): Promise<T> {
   const { json, ...reste } = init;
-  const r = await fetch(`${API}${chemin}`, {
-    ...reste,
-    credentials: 'include',
-    headers: { ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}), ...reste.headers },
-    body: json !== undefined ? JSON.stringify(json) : reste.body,
-  });
+  let r: Response;
+  try {
+    r = await fetch(`${API}${chemin}`, {
+      ...reste,
+      credentials: 'include',
+      headers: { ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}), ...reste.headers },
+      body: json !== undefined ? JSON.stringify(json) : reste.body,
+    });
+  } catch {
+    // « Failed to fetch » : serveur arrêté, réseau coupé (CT-11)
+    throw new ErreurApi(0, 'RESEAU', 'Serveur injoignable');
+  }
   if (r.status === 401 && reessai && !chemin.startsWith('/v1/auth/') && (await rafraichirSession())) {
     return appelApi<T>(chemin, init, false);
   }
   const corps = await r.json().catch(() => null);
   if (!r.ok) {
-    const message = Array.isArray(corps?.message) ? corps.message.join(' · ') : (corps?.message ?? `Erreur ${r.status}`);
-    throw new ErreurApi(r.status, corps?.code, message, corps ?? {});
+    // Proxy ou serveur qui ne renvoie pas de JSON (502, 504…) : on le traite comme une erreur interne.
+    throw new ErreurApi(r.status, corps?.code ?? (r.status >= 500 ? 'ERREUR_INTERNE' : undefined), corps?.message ?? `Erreur ${r.status}`, corps ?? {});
   }
   return corps as T;
 }
