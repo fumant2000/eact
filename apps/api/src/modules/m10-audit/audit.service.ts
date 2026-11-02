@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
@@ -48,12 +48,25 @@ export function calculerHash(hashPrecedent: string, e: EntreeAudit, horodatage: 
  */
 @Injectable()
 export class AuditService {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   @OnEvent('**', { async: true })
   async surEvenement(payload: EntreeAudit) {
-    if (payload?.action && payload?.ressourceType) {
-      await this.prisma.$transaction((tx) => this.journaliser(payload, tx));
+    if (!payload?.action || !payload?.ressourceType) return;
+    // BF-48 : une entrée d'audit ne doit pas se perdre sous charge ; trois essais avant de signaler l'échec.
+    for (let essai = 1; ; essai++) {
+      try {
+        await this.prisma.$transaction((tx) => this.journaliser(payload, tx));
+        return;
+      } catch (e) {
+        if (essai >= 3) {
+          this.logger.error(`Entrée d'audit non écrite (${payload.action} ${payload.ressourceId ?? ''}) : ${(e as Error).message}`);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 200 * essai));
+      }
     }
   }
 

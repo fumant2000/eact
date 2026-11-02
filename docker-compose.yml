@@ -122,7 +122,8 @@ services:
 
   gotenberg:
     image: gotenberg/gotenberg:8
-    command: ["gotenberg", "--api-timeout=60s", "--log-level=warn"]
+    # Chromium et LibreOffice démarrés au lancement : sinon le premier PDF/A attend leur démarrage à froid (> 20 s sous Docker Desktop)
+    command: ["gotenberg", "--api-timeout=60s", "--log-level=warn", "--chromium-auto-start", "--chromium-start-timeout=60s", "--libreoffice-auto-start", "--libreoffice-start-timeout=60s"]
     networks: [app]
     restart: unless-stopped
 

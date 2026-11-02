@@ -86,6 +86,16 @@ export class NotificationsService {
     }
   }
 
+  @OnEvent(EVENEMENTS.ACTE_SIGNE, { async: true })
+  async apresSignature({ acteId }: { acteId: string }) {
+    const acte = await this.prisma.acte.findUnique({ where: { id: acteId }, include: { redacteur: true, typeActe: true } });
+    if (!acte?.reference) return;
+    await this.envoyer([acte.redacteur], `Acte signé ${acte.reference}`, () =>
+      `${acte.typeActe.libelle} « ${acte.objet} » a été signé sous la référence ${acte.reference}.\n` +
+      `Code de vérification public : ${acte.codeVerification}\n\nConsulter et télécharger le PDF/A : ${this.lien(acteId)}`,
+    );
+  }
+
   @OnEvent(EVENEMENTS.ACTE_REJETE, { async: true })
   async apresRejet({ acteId }: { acteId: string }) {
     const acte = await this.charger(acteId);

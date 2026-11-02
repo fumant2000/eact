@@ -24,6 +24,7 @@ export const ROLES_MFA_OBLIGATOIRE: Role[] = [Role.AUTORITE_SIGNATAIRE, Role.SEC
 
 const ECHECS_MAX_MOT_DE_PASSE = 5; // BF-03
 const ECHECS_MAX_TOTP = 3; // maquette B2
+const ECHECS_MAX_TOTP_SIGNATURE = 5; // maquette E3
 const DUREE_VERROU_MS = 15 * 60_000; // BF-03
 const INACTIVITE_MAX_MS = 30 * 60_000; // BF-04
 const VALIDITE_LIEN_MS = 30 * 60_000; // BF-05
@@ -178,10 +179,24 @@ export class AuthService {
     return { etape: 'CONNECTE', jetons: await this.ouvrirSession(u.id, ip, true, { codeSecoursUtilise }) };
   }
 
-  /** Vérifie un code TOTP pour une action sensible (RG-12 : signature) sans ouvrir de session. */
-  async verifierCodeTotp(utilisateurId: string, code: string): Promise<boolean> {
+  /**
+   * RG-12 : code TOTP redemandé pour une action sensible (signature), sans ouvrir de session.
+   * 5 essais (maquette E3) puis verrouillage du compte, comme à la connexion (BF-03).
+   */
+  async verifierTotpAction(utilisateurId: string, code: string, ip: string): Promise<void> {
     const u = await this.prisma.utilisateur.findUniqueOrThrow({ where: { id: utilisateurId } });
-    return !!u.totpSecretChiffre && u.totpActive && authenticator.check(code.trim(), this.chiffrement.dechiffrer(u.totpSecretChiffre));
+    this.verifierVerrou(u);
+    if (!u.totpActive || !u.totpSecretChiffre) {
+      throw new ForbiddenException({ code: 'MFA_NON_ACTIVE', message: 'Activez la vérification en deux étapes pour signer' });
+    }
+    const saisi = code.trim().replace(/\s+/g, '');
+    if (/^\d{6}$/.test(saisi) && authenticator.check(saisi, this.chiffrement.dechiffrer(u.totpSecretChiffre))) {
+      if (u.echecsConnexion) await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsConnexion: 0 } });
+      return;
+    }
+    this.auditer({ acteurId: u.id, action: EVENEMENTS.MFA_ECHOUE, ressourceType: 'utilisateur', ressourceId: u.id, details: { ip, contexte: 'signature' } });
+    const essaisRestants = await this.enregistrerEchec(u, ECHECS_MAX_TOTP_SIGNATURE, ip);
+    throw new UnauthorizedException({ code: 'CODE_INVALIDE', message: "Code incorrect : l'acte n'a pas été signé", essaisRestants });
   }
 
   // ─────────── BF-02 : enrôlement (maquette B3) ───────────

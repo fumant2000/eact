@@ -289,7 +289,8 @@ model Acte {
   signataireId     String?   @map("signataire_id") @db.Uuid
   delegationId     String?   @map("delegation_id") @db.Uuid
   signeLe          DateTime? @map("signe_le")
-  empreinteSha256  String?   @map("empreinte_sha256")
+  empreinteSha256  String?   @map("empreinte_sha256") // du texte signé (imprimée sur l'acte, BF-32)
+  empreintePdf     String?   @map("empreinte_pdf") // du fichier PDF/A (comparaison d'un PDF déposé, BF-57)
   codeVerification String?   @unique @map("code_verification") // ex. K7Q2-9M (QR)
   cheminPdf        String?   @map("chemin_pdf")
   referenceExterne String?   @map("reference_externe") // n° du décret signé par l'autorité externe (BF-39)

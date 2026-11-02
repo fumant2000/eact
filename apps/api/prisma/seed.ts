@@ -168,7 +168,7 @@ async function main() {
   const motDePasseHash = await argon2.hash(process.env.DEMO_MOT_DE_PASSE ?? 'Minesup@2026', { type: argon2.argon2id });
   const comptes = [
     { matricule: 'MINESUP-00001', prenom: 'Roger', nom: 'ESSOMBA', structureId: cab.id, roles: [Role.AUTORITE_SIGNATAIRE], totp: true },
-    { matricule: 'MINESUP-00017', prenom: 'Ibrahim', nom: 'BELLO', structureId: sg.id, roles: [Role.SECRETAIRE_GENERAL, Role.VISEUR, Role.AUTORITE_SIGNATAIRE], totp: true },
+    { matricule: 'MINESUP-00017', prenom: 'Ibrahim', nom: 'BELLO', structureId: sg.id, roles: [Role.SECRETAIRE_GENERAL, Role.VISEUR], totp: true }, // signe par délégation (RG-11)
     { matricule: 'MINESUP-03107', prenom: 'Abdou', nom: 'NJOYA', structureId: dag.id, roles: [Role.VISEUR, Role.REDACTEUR] },
     { matricule: 'MINESUP-02845', prenom: 'Marie', nom: 'BELINGA', structureId: sp.id, roles: [Role.VISEUR, Role.REDACTEUR] },
     { matricule: 'MINESUP-04812', prenom: 'Christelle', nom: 'EBOGO', structureId: sp.id, roles: [Role.REDACTEUR] },
@@ -196,6 +196,7 @@ async function main() {
       },
     });
     await prisma.utilisateurRole.createMany({ data: c.roles.map((role) => ({ utilisateurId: u.id, role })), skipDuplicates: true });
+    await prisma.utilisateurRole.deleteMany({ where: { utilisateurId: u.id, role: { notIn: c.roles } } }); // le seed fait foi
     ids[c.matricule] = u.id;
   }
 

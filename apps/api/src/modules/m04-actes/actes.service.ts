@@ -176,7 +176,9 @@ export class ActesService {
    * qu'à son circuit. Les règles du parapheur (rôle de l'étape courante) s'ajouteront avec M05.
    */
   private async verifierLecture(acte: ActeComplet, u: UtilisateurConnecte) {
-    if (acte.redacteurId === u.sub) return;
+    if (acte.redacteurId === u.sub || acte.signataireId === u.sub) return;
+    // RG-15 : le signataire fait partie du circuit ; à « prêt à signer », le Ministre ouvre aussi les actes confidentiels.
+    if (acte.statut === StatutActe.PRET_A_SIGNER && u.roles.includes(Role.AUTORITE_SIGNATAIRE)) return;
     // Membres du circuit : ceux qui ont visé et ceux à qui revient l'étape courante (RG-04, RG-15).
     if (await this.circuits.estMembreDuCircuit(acte.id, u)) return;
     const autorite = u.roles.some((r) => r === Role.SECRETAIRE_GENERAL || r === Role.AUTORITE_SIGNATAIRE);
@@ -221,6 +223,7 @@ export class ActesService {
     const lignee = await this.circuits.ascendants(acte.structureId);
     return {
       id: acte.id,
+      redacteurId: acte.redacteurId,
       version: acte.version,
       statut: acte.statut,
       reference: acte.reference,
