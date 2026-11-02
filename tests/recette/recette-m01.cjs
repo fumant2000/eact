@@ -1,6 +1,6 @@
 // Recette M01 de bout en bout contre l'API locale (http://localhost:3000) et Mailpit (http://localhost:8025).
 const { authenticator } = require(require.resolve('otplib', { paths: [require('node:path').join(__dirname, '..', '..', 'apps', 'api')] }));
-const API = process.env.EACT_API ?? 'http://localhost:8080/api';
+const API = process.env.EACT_API ?? 'http://localhost:3000';
 const MDP = 'Minesup@2026';
 const SECRET = 'JBSWY3DPEHPK3PXP';
 let ok = 0, ko = 0;
@@ -42,6 +42,10 @@ function client() {
   verifier('BF-03 essais restants puis verrouillage', r.status === 403 && r.body?.code === 'COMPTE_VERROUILLE', restants.join(','));
   r = await t('POST', '/v1/auth/login', { identifiant: 'MINESUP-06233', motDePasse: MDP });
   verifier('BF-03 bon mot de passe refusé pendant le verrou', r.status === 403 && !!r.body?.deverrouillageLe);
+  const p = client();
+  await Promise.all(Array.from({ length: 8 }, () => p('POST', '/v1/auth/login', { identifiant: 'MINESUP-05520', motDePasse: 'mauvais' })));
+  r = await p('POST', '/v1/auth/login', { identifiant: 'MINESUP-05520', motDePasse: MDP });
+  verifier('BF-03 8 essais simultanés → verrouillage (aucun échec perdu)', r.status === 403 && r.body?.code === 'COMPTE_VERROUILLE');
   r = await t('POST', '/v1/auth/login', { identifiant: 'INCONNU-1', motDePasse: 'x' });
   verifier('compte inconnu → même réponse générique', r.status === 401 && r.body?.code === 'IDENTIFIANTS_INCORRECTS' && r.body?.essaisRestants === undefined);
 
@@ -51,6 +55,10 @@ function client() {
   verifier('BF-02 SG → étape MFA, sans session', r.body?.etape === 'MFA' && !r.jar.eact_at && !!r.jar.eact_mfa);
   r = await c('POST', '/v1/auth/mfa/verify', { code: '000000' });
   verifier('BF-02 code faux → 401 + essais restants', r.status === 401 && r.body?.essaisRestants === 2);
+  const c2 = client();
+  await c2('POST', '/v1/auth/login', { identifiant: 'MINESUP-00017', motDePasse: MDP });
+  r = await c2('POST', '/v1/auth/mfa/verify', { code: '000000' });
+  verifier('BF-02 se reconnecter ne redonne pas d’essais TOTP', r.status === 401 && r.body?.essaisRestants === 1);
   r = await c('POST', '/v1/auth/mfa/verify', { code: authenticator.generate(SECRET) });
   verifier('BF-02 code TOTP valide → connecté', r.body?.etape === 'CONNECTE');
   r = await c('GET', '/v1/auth/moi');
@@ -112,6 +120,7 @@ function client() {
   r = await c('GET', '/v1/audit?limite=100');
   const actions = [...new Set((r.body ?? []).map((e) => e.action))];
   verifier('BF-48 événements d’authentification journalisés', actions.includes('utilisateur.compte_verrouille') && actions.includes('utilisateur.mfa_active'), actions.join(' '));
+  verifier('paramètre « apres » invalide → 400', (await c('GET', '/v1/audit?apres=abc')).status === 400);
   r = await c('GET', '/v1/audit/verification');
   verifier('BF-50 chaîne du journal intègre', r.body?.integre === true);
 

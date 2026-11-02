@@ -9,7 +9,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { AuthService } from '../m01-auth/auth.service';
 import { CircuitService } from '../m05-circuit/circuit.service';
 
-export const CHAMPS_POSSIBLES = ['objet', 'contenu', 'ampliation'] as const;
+const CHAMPS_POSSIBLES = ['objet', 'contenu', 'ampliation'] as const;
 
 export interface EtapeSaisie {
   libelle: string;
@@ -17,10 +17,7 @@ export interface EtapeSaisie {
   delaiHeures: number;
 }
 
-/**
- * M15 — Administration et paramétrage (BF-64, BF-65 ; ENF-08 : un type, un circuit ou une structure
- * s'ajoutent par paramétrage, sans modifier le code) et M02 côté administrateur (BF-06 à BF-08).
- */
+/** M15 Administration et paramétrage — BF-64, BF-65, ENF-08 ; M02 côté administrateur (BF-06 à BF-08). */
 @Injectable()
 export class AdminService {
   constructor(
@@ -183,7 +180,7 @@ export class AdminService {
         },
       });
       this.journal(u, EVENEMENTS.DROITS_MODIFIES, 'utilisateur', cree.id, { creation: true, roles: d.roles });
-      await this.auth.demanderReinitialisation(cree.email, ip); // e-mail d'activation (Mailpit en dev)
+      await this.auth.demanderReinitialisation(cree.email, ip); // e-mail d'activation
       return { id: cree.id };
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ConflictException({ code: 'DOUBLON', message: 'Matricule ou e-mail déjà utilisé' });
@@ -202,7 +199,7 @@ export class AdminService {
         await tx.utilisateurRole.deleteMany({ where: { utilisateurId: id, role: { notIn: d.roles } } });
         await tx.utilisateurRole.createMany({ data: d.roles.map((role) => ({ utilisateurId: id, role })), skipDuplicates: true });
       }
-      // Désactivation : ses sessions tombent immédiatement (BF-04).
+      // Désactivation : sessions révoquées ; le jeton d'accès déjà émis reste valable jusqu'à 15 min (BF-04).
       if (d.actif === false) await tx.sessionUtilisateur.updateMany({ where: { utilisateurId: id, revoqueLe: null }, data: { revoqueLe: new Date() } });
     });
     this.journal(u, EVENEMENTS.DROITS_MODIFIES, 'utilisateur', id, d);
@@ -214,7 +211,7 @@ export class AdminService {
   }
 
   async deverrouiller(u: UtilisateurConnecte, id: string) {
-    await this.prisma.utilisateur.update({ where: { id }, data: { echecsConnexion: 0, verrouilleJusqua: null } });
+    await this.prisma.utilisateur.update({ where: { id }, data: { echecsConnexion: 0, echecsMfa: 0, verrouilleJusqua: null } });
     this.journal(u, EVENEMENTS.DROITS_MODIFIES, 'utilisateur', id, { deverrouille: true });
   }
 }

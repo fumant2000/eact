@@ -1,6 +1,5 @@
-// Modèle physique EACT (CDC §17, figure 11).
-// Toute évolution passe par une migration versionnée : `npm run db:migrate`.
-// Compléments SQL hors Prisma (triggers audit et plein texte) : fin de la migration init.
+// Modèle physique EACT (CDC §17) ; toute évolution passe par une migration (`npm run db:migrate`).
+// Triggers audit et plein texte : SQL en fin de migration init.
 
 generator client {
   provider = "prisma-client-js"
@@ -111,7 +110,7 @@ model Utilisateur {
   email             String    @unique
   nom               String
   prenom            String
-  motDePasseHash    String    @map("mot_de_passe_hash") // Argon2id (ENF-07)
+  motDePasseHash    String    @map("mot_de_passe_hash") // Argon2id (ENF-06)
   telephone         String?
   totpSecretChiffre String?   @map("totp_secret_chiffre") // AES-256-GCM (SECRETS_ENCRYPTION_KEY)
   totpActive        Boolean   @default(false) @map("totp_active") // vrai après confirmation de l'enrôlement
@@ -119,6 +118,7 @@ model Utilisateur {
   langue            Langue    @default(FR)
   actif             Boolean   @default(true) // BF-07 : jamais supprimé
   echecsConnexion   Int       @default(0) @map("echecs_connexion")
+  echecsMfa         Int       @default(0) @map("echecs_mfa") // codes TOTP faux : non remis à zéro par le mot de passe (BF-02, RG-12)
   verrouilleJusqua  DateTime? @map("verrouille_jusqua") // BF-03
   structureId       String    @map("structure_id") @db.Uuid
   structure         Structure @relation(fields: [structureId], references: [id])
@@ -152,7 +152,7 @@ model Delegation {
   delegataireId String         @map("delegataire_id") @db.Uuid
   debut         DateTime
   fin           DateTime // RG-17 : expiration automatique
-  mention       String // « Pour le Ministre et par délégation »
+  mention       String // imprimée avec la signature
   perimetre     String[]       @default([]) // codes des types d'actes couverts (vide = tous)
   actif         Boolean        @default(true)
   delegant      Utilisateur    @relation("Delegant", fields: [delegantId], references: [id])
@@ -222,7 +222,7 @@ model ModeleActe {
   libelle           String
   cheminGithub      String   @map("chemin_github")
   commitSha         String   @map("commit_sha")
-  version           String   @default("1.0") // étiquette affichée (v2.3), tirée du dépôt de gabarits
+  version           String   @default("1.0") // étiquette tirée du dépôt de gabarits
   description       String?
   ampliationsDefaut String[] @default([]) @map("ampliations_defaut") // BF-16
   contenuCache      String   @map("contenu_cache") @db.Text
@@ -291,7 +291,7 @@ model Acte {
   signeLe          DateTime? @map("signe_le")
   empreinteSha256  String?   @map("empreinte_sha256") // du texte signé (imprimée sur l'acte, BF-32)
   empreintePdf     String?   @map("empreinte_pdf") // du fichier PDF/A (comparaison d'un PDF déposé, BF-57)
-  codeVerification String?   @unique @map("code_verification") // ex. K7Q2-9M (QR)
+  codeVerification String?   @unique @map("code_verification") // code court imprimé sous le QR (BF-55)
   cheminPdf        String?   @map("chemin_pdf")
   referenceExterne String?   @map("reference_externe") // n° du décret signé par l'autorité externe (BF-39)
 
@@ -421,7 +421,7 @@ model TransmissionExterne {
   id                String            @id @default(uuid()) @db.Uuid
   acteId            String            @map("acte_id") @db.Uuid
   motif             MotifTransmission
-  destinataire      String // Présidence de la République, services du Premier Ministre…
+  destinataire      String
   transmisLe        DateTime          @map("transmis_le")
   bordereau         String
   accuseReceptionLe DateTime?         @map("accuse_reception_le")
@@ -437,7 +437,7 @@ model EvenementAudit {
   id            BigInt   @id @default(autoincrement())
   horodatage    DateTime @default(now())
   acteurId      String?  @map("acteur_id") @db.Uuid
-  action        String // ex. acte.signe
+  action        String // nom d'événement du bus (EVENEMENTS)
   ressourceType String   @map("ressource_type")
   ressourceId   String?  @map("ressource_id")
   details       Json     @default("{}")

@@ -1,5 +1,5 @@
 // Recette M04 (rédaction, pièces, soumission). API : variable EACT_API (défaut : démo complète).
-const API = process.env.EACT_API ?? 'http://localhost:8080/api';
+const API = process.env.EACT_API ?? 'http://localhost:3000';
 const MDP = 'Minesup@2026';
 let ok = 0, ko = 0;
 const verifier = (nom, cond, info = '') => { cond ? ok++ : ko++; console.log(`${cond ? 'OK ' : 'KO '} ${nom}${info !== '' ? ' — ' + info : ''}`); };
@@ -93,6 +93,9 @@ const fichier = (nom, octets) => { const f = new FormData(); f.append('fichier',
   r = await red('POST', `/v1/actes/${id}/soumission`, { version: (await red('GET', `/v1/actes/${id}`)).body.version });
   verifier('soumission bloquée tant que des pièces refusées restent', r.status === 409 && r.body.code === 'PIECES_REFUSEES');
   for (const nom of ['virus.pdf', 'outil.exe', 'faux.pdf']) await red('DELETE', `/v1/actes/${id}/pieces/${ids[nom]}`);
+  const sansFichier = new FormData(); sansFichier.append('note', 'aucun fichier');
+  r = await red('POST', `/v1/actes/${id}/pieces`, sansFichier);
+  verifier('dépôt sans fichier → 400 (pas d’erreur 500)', r.status === 400 && r.body?.code === 'FICHIER_MANQUANT');
 
   // Accès (RG-15)
   const autre = await session('MINESUP-02845');
@@ -115,6 +118,7 @@ const fichier = (nom, octets) => { const f = new FormData(); f.append('fichier',
   // C1 Mes actes
   r = await red('GET', '/v1/actes');
   verifier('C1 « Mes actes » et compteurs', r.body.compteurs.enCircuit >= 1 && r.body.actes.some((a) => a.id === id && a.etapeCourante === 'Visa du chef de service'), JSON.stringify(r.body.compteurs));
+  verifier('groupe inconnu → 400 (pas d’erreur 500)', (await red('GET', '/v1/actes?groupe=inconnu')).status === 400);
   verifier('RBAC : l’auditrice ne liste pas d’actes à rédiger', (await (await session('MINESUP-07341'))('GET', '/v1/actes')).status === 403);
 
   // Audit

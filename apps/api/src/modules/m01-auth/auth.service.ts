@@ -20,11 +20,11 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import type { EntreeAudit } from '../m10-audit/audit.service';
 
 /** BF-02 : second facteur obligatoire pour ces rôles. */
-export const ROLES_MFA_OBLIGATOIRE: Role[] = [Role.AUTORITE_SIGNATAIRE, Role.SECRETAIRE_GENERAL, Role.ADMINISTRATEUR];
+const ROLES_MFA_OBLIGATOIRE: Role[] = [Role.AUTORITE_SIGNATAIRE, Role.SECRETAIRE_GENERAL, Role.ADMINISTRATEUR];
 
 const ECHECS_MAX_MOT_DE_PASSE = 5; // BF-03
-const ECHECS_MAX_TOTP = 3; // maquette B2
-const ECHECS_MAX_TOTP_SIGNATURE = 5; // maquette E3
+const ECHECS_MAX_TOTP = 3; // BF-02
+const ECHECS_MAX_TOTP_SIGNATURE = 5; // RG-12
 const DUREE_VERROU_MS = 15 * 60_000; // BF-03
 const INACTIVITE_MAX_MS = 30 * 60_000; // BF-04
 const VALIDITE_LIEN_MS = 30 * 60_000; // BF-05
@@ -51,17 +51,12 @@ function codeDeSecours(): string {
   return `${car.slice(0, 4)}-${car.slice(4)}`;
 }
 
-/** c.ebogo@minesup.test → c.e•••@minesup.test (maquette B5). */
 function masquerEmail(email: string): string {
   const [local, domaine] = email.split('@');
   return `${local.slice(0, 3)}•••@${domaine}`;
 }
 
-/**
- * IAuthentification — M01 (BF-01 à BF-05, RG-12).
- * Mots de passe Argon2id ; jeton d'accès JWT de 15 min ; jeton de rafraîchissement opaque, haché en base,
- * renouvelé à chaque usage et refusé après 30 min d'inactivité.
- */
+/** M01 IAuthentification — BF-01 à BF-05, RG-12 : Argon2id, JWT d'accès 15 min, jeton de rafraîchissement haché et tournant. */
 @Injectable()
 export class AuthService {
   private hashFactice?: Promise<string>;
@@ -96,16 +91,24 @@ export class AuthService {
     }
   }
 
-  /** Incrémente les échecs et verrouille au-delà du seuil ; renvoie les essais restants. */
-  private async enregistrerEchec(u: Utilisateur, seuil: number, ip: string): Promise<number> {
-    const echecs = u.echecsConnexion + 1;
-    const verrou = echecs >= seuil ? new Date(Date.now() + DUREE_VERROU_MS) : null;
-    await this.prisma.utilisateur.update({
-      where: { id: u.id },
-      data: { echecsConnexion: verrou ? 0 : echecs, verrouilleJusqua: verrou },
+  /**
+   * Incrémente le compteur (mot de passe ou TOTP) et verrouille au seuil ; renvoie les essais restants.
+   * Incrément atomique en base : des tentatives parallèles ne perdent aucun échec.
+   */
+  private async enregistrerEchec(id: string, compteur: 'echecsConnexion' | 'echecsMfa', seuil: number, ip: string): Promise<number> {
+    const maj = await this.prisma.utilisateur.update({
+      where: { id },
+      data: compteur === 'echecsMfa' ? { echecsMfa: { increment: 1 } } : { echecsConnexion: { increment: 1 } },
+      select: { echecsConnexion: true, echecsMfa: true },
     });
-    if (verrou) {
-      this.auditer({ acteurId: u.id, action: EVENEMENTS.COMPTE_VERROUILLE, ressourceType: 'utilisateur', ressourceId: u.id, details: { ip } });
+    const echecs = maj[compteur];
+    if (echecs >= seuil) {
+      const verrou = new Date(Date.now() + DUREE_VERROU_MS);
+      await this.prisma.utilisateur.update({
+        where: { id },
+        data: { ...(compteur === 'echecsMfa' ? { echecsMfa: 0 } : { echecsConnexion: 0 }), verrouilleJusqua: verrou },
+      });
+      this.auditer({ acteurId: id, action: EVENEMENTS.COMPTE_VERROUILLE, ressourceType: 'utilisateur', ressourceId: id, details: { ip } });
       this.verifierVerrou({ verrouilleJusqua: verrou });
     }
     return seuil - echecs;
@@ -126,11 +129,12 @@ export class AuthService {
 
     if (!(await argon2.verify(u.motDePasseHash, motDePasse))) {
       this.auditer({ acteurId: u.id, action: EVENEMENTS.CONNEXION_ECHOUEE, ressourceType: 'utilisateur', ressourceId: u.id, details: { ip } });
-      const essaisRestants = await this.enregistrerEchec(u, ECHECS_MAX_MOT_DE_PASSE, ip);
+      const essaisRestants = await this.enregistrerEchec(u.id, 'echecsConnexion', ECHECS_MAX_MOT_DE_PASSE, ip);
       throw new UnauthorizedException({ code: 'IDENTIFIANTS_INCORRECTS', message: 'Identifiants incorrects', essaisRestants });
     }
     if (!u.actif) throw new ForbiddenException({ code: 'COMPTE_DESACTIVE', message: 'Compte désactivé' });
 
+    // Le compteur TOTP (echecsMfa) n'est pas remis à zéro ici : se reconnecter ne redonne pas d'essais.
     await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsConnexion: 0, verrouilleJusqua: null } });
 
     if (exigeMfa(u)) {
@@ -172,17 +176,14 @@ export class AuthService {
     }
     if (!valide) {
       this.auditer({ acteurId: u.id, action: EVENEMENTS.MFA_ECHOUE, ressourceType: 'utilisateur', ressourceId: u.id, details: { ip } });
-      const essaisRestants = await this.enregistrerEchec(u, ECHECS_MAX_TOTP, ip);
+      const essaisRestants = await this.enregistrerEchec(u.id, 'echecsMfa', ECHECS_MAX_TOTP, ip);
       throw new UnauthorizedException({ code: 'CODE_INVALIDE', message: 'Code invalide ou expiré', essaisRestants });
     }
-    await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsConnexion: 0 } });
+    await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsConnexion: 0, echecsMfa: 0 } });
     return { etape: 'CONNECTE', jetons: await this.ouvrirSession(u.id, ip, true, { codeSecoursUtilise }) };
   }
 
-  /**
-   * RG-12 : code TOTP redemandé pour une action sensible (signature), sans ouvrir de session.
-   * 5 essais (maquette E3) puis verrouillage du compte, comme à la connexion (BF-03).
-   */
+  /** RG-12 : TOTP redemandé à la signature, sans ouvrir de session ; 5 essais puis verrouillage (BF-03). */
   async verifierTotpAction(utilisateurId: string, code: string, ip: string): Promise<void> {
     const u = await this.prisma.utilisateur.findUniqueOrThrow({ where: { id: utilisateurId } });
     this.verifierVerrou(u);
@@ -191,15 +192,15 @@ export class AuthService {
     }
     const saisi = code.trim().replace(/\s+/g, '');
     if (/^\d{6}$/.test(saisi) && authenticator.check(saisi, this.chiffrement.dechiffrer(u.totpSecretChiffre))) {
-      if (u.echecsConnexion) await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsConnexion: 0 } });
+      if (u.echecsMfa) await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsMfa: 0 } });
       return;
     }
     this.auditer({ acteurId: u.id, action: EVENEMENTS.MFA_ECHOUE, ressourceType: 'utilisateur', ressourceId: u.id, details: { ip, contexte: 'signature' } });
-    const essaisRestants = await this.enregistrerEchec(u, ECHECS_MAX_TOTP_SIGNATURE, ip);
+    const essaisRestants = await this.enregistrerEchec(u.id, 'echecsMfa', ECHECS_MAX_TOTP_SIGNATURE, ip);
     throw new UnauthorizedException({ code: 'CODE_INVALIDE', message: "Code incorrect : l'acte n'a pas été signé", essaisRestants });
   }
 
-  // ─────────── BF-02 : enrôlement (maquette B3) ───────────
+  // ─────────── BF-02 : enrôlement ───────────
 
   async demarrerEnrolement(jetonMfa: string | undefined) {
     const u = await this.utilisateurEnAttenteMfa(jetonMfa);
@@ -317,8 +318,7 @@ export class AuthService {
   }
 
   // ─────────── Mode démonstration (développement uniquement) ───────────
-  // Permet de présenter EACT sans téléphone : connexion en un clic et code TOTP affiché à l'écran.
-  // Inactif si DEMO_MODE n'est pas « true » ou si NODE_ENV=production (CDC tableau 24 : aucun contournement en production).
+  // Jamais actif en production : aucun contournement de l'authentification (CDC tableau 24).
 
   static modeDemo(): boolean {
     return process.env.DEMO_MODE === 'true' && process.env.NODE_ENV !== 'production';
@@ -343,7 +343,7 @@ export class AuthService {
   async connexionDemo(matricule: string, ip: string): Promise<ResultatConnexion> {
     const u = await this.prisma.utilisateur.findUnique({ where: { matricule } });
     if (!u?.actif) throw new UnauthorizedException({ code: 'IDENTIFIANTS_INCORRECTS', message: 'Compte de démonstration introuvable' });
-    await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsConnexion: 0, verrouilleJusqua: null } });
+    await this.prisma.utilisateur.update({ where: { id: u.id }, data: { echecsConnexion: 0, echecsMfa: 0, verrouilleJusqua: null } });
     return { etape: 'CONNECTE', jetons: await this.ouvrirSession(u.id, ip, true, { demo: true }) };
   }
 
@@ -353,13 +353,13 @@ export class AuthService {
     return { code: authenticator.generate(secret), valableEncore: authenticator.timeRemaining() };
   }
 
-  /** Code TOTP de l'utilisateur en attente de second facteur (écrans B2, B3). */
+  /** Code TOTP de l'utilisateur en attente de second facteur. */
   async codeDemoMfa(jetonMfa: string | undefined) {
     const u = await this.utilisateurEnAttenteMfa(jetonMfa);
     return this.codeCourant(u.totpSecretChiffre);
   }
 
-  /** Code TOTP de l'utilisateur connecté (signature, E3). */
+  /** Code TOTP de l'utilisateur connecté (signature). */
   async codeDemo(utilisateurId: string) {
     const u = await this.prisma.utilisateur.findUniqueOrThrow({ where: { id: utilisateurId } });
     return this.codeCourant(u.totpSecretChiffre);

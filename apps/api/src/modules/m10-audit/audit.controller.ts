@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { Roles } from '../../common/security/securite';
@@ -17,6 +17,9 @@ export class AuditController {
   /** BF-48 : entrées les plus récentes d'abord. */
   @Get()
   async lister(@Query('limite') limite = '50', @Query('apres') apres?: string) {
+    if (apres && !/^\d+$/.test(apres)) {
+      throw new BadRequestException({ code: 'PARAMETRE_INVALIDE', message: '« apres » doit être un identifiant numérique' });
+    }
     const entrees = await this.prisma.evenementAudit.findMany({
       take: Math.min(Number(limite) || 50, 200),
       ...(apres ? { cursor: { id: BigInt(apres) }, skip: 1 } : {}),

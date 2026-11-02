@@ -12,14 +12,14 @@ node tests/recette/lancer.cjs m05 m06      # parapheur et signature seulement
 
 | Script | Module | Contrôles | Points forts |
 |---|---|---|---|
-| `recette-m01.cjs` | Authentification | 29 | verrouillage, TOTP, enrôlement, codes de secours, rotation et révocation des jetons, réinitialisation par Mailpit |
-| `recette-m04.cjs` | Rédaction | 32 | RG-03, verrou optimiste, HTML nettoyé, pipeline des pièces (EICAR, faux PDF), RG-16 |
+| `recette-m01.cjs` | Authentification | 32 | verrouillage (y compris en parallèle), TOTP (essais non remis à zéro par une reconnexion), enrôlement, codes de secours, rotation et révocation des jetons, réinitialisation par Mailpit |
+| `recette-m04.cjs` | Rédaction | 34 | RG-03, verrou optimiste, HTML nettoyé, pipeline des pièces (EICAR, faux PDF), RG-16, entrées invalides → 400 |
 | `recette-m05.cjs` | Parapheur | 31 | qui vise quoi (RG-04), renvoi à une étape, correction, rejet, e-mails |
 | `recette-m06.cjs` | Signature et vérification | 26 | RG-11, RG-12, **TF-07** (20 signatures simultanées), **TF-08** (rejeu), **TF-10** (PDF modifié), PDF/A |
 | `recette-m02.cjs` | Délégations | 16 | délégation de signature, intérim d'un viseur, révocation, expiration |
 | `recette-m15.cjs` | Administration | 22 | ENF-08 (circuit créé sans code), comptes, rôles, structures |
 
-Variables : `EACT_API` (défaut `http://localhost:8080/api`), `EACT_MAILPIT` (défaut `http://localhost:8025/api/v1`).
+Variables : `EACT_API` (défaut `http://localhost:3000` : l’API directement, car nginx limite les connexions répétées), `EACT_MAILPIT` (défaut `http://localhost:8025/api/v1`).
 Les scripts M02 et M06 lisent et écrivent directement en base par `docker compose exec postgres` (test de
 concurrence, dates d'expiration).
 

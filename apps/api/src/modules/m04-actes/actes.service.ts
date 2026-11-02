@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -45,11 +46,7 @@ const INCLUSIONS = {
 } satisfies Prisma.ActeInclude;
 type ActeComplet = Prisma.ActeGetPayload<{ include: typeof INCLUSIONS }>;
 
-/**
- * IActes — M04 « Rédaction et modèles d'actes » (BF-15 à BF-22, UC-06).
- * Règles : RG-02 (type + structure), RG-03 (champs obligatoires), RG-10 (immuable après signature),
- * RG-16 (seul un brouillon jamais soumis se supprime), RG-24 (pièces analysées), verrou optimiste (§14.2).
- */
+/** M04 IActes — BF-15 à BF-22, RG-02, RG-03, RG-10, RG-16, RG-24 ; verrou optimiste sur `version`. */
 @Injectable()
 export class ActesService {
   constructor(
@@ -77,7 +74,7 @@ export class ActesService {
           signeHorsMinistere: t.signeHorsMinistere,
           // UC-06, précondition : le type doit posséder un circuit actif
           nbEtapes: circuit?.etapes.length ?? null,
-          structureChaine: structure?.chaine ?? [], // en-tête de l'aperçu (C3)
+          structureChaine: structure?.chaine ?? [], // en-tête de l'aperçu
           signataire: t.signeHorsMinistere ? 'Président de la République ou Premier Ministre' : await this.circuits.signatairePrevu(t.code),
         };
       }),
@@ -140,8 +137,11 @@ export class ActesService {
 
   // ─────────── Consultation ───────────
 
-  /** « Mes actes » (C1) : actes rédigés par l'agent, avec compteurs par onglet. */
+  /** Actes rédigés par l'agent, avec compteurs par groupe de statuts. */
   async mesActes(u: UtilisateurConnecte, groupe: GroupeStatut = 'tous') {
+    if (groupe !== 'tous' && !Object.hasOwn(GROUPES, groupe)) {
+      throw new BadRequestException({ code: 'GROUPE_INCONNU', message: `Groupe attendu : tous, ${Object.keys(GROUPES).join(', ')}` });
+    }
     const actes = await this.prisma.acte.findMany({
       where: { redacteurId: u.sub },
       include: INCLUSIONS,
@@ -173,10 +173,7 @@ export class ActesService {
     return acte;
   }
 
-  /**
-   * RG-15 : rédacteur, membres du circuit (viseurs) et autorités ; un acte confidentiel n'est ouvert
-   * qu'à son circuit. Les règles du parapheur (rôle de l'étape courante) s'ajouteront avec M05.
-   */
+  /** RG-15 : rédacteur, signataire, membres du circuit et autorités ; un acte confidentiel n'est ouvert qu'à son circuit. */
   private async verifierLecture(acte: ActeComplet, u: UtilisateurConnecte) {
     if (acte.redacteurId === u.sub || acte.signataireId === u.sub) return;
     // RG-15 : le signataire fait partie du circuit ; à « prêt à signer », le Ministre ouvre aussi les actes confidentiels.
@@ -218,7 +215,7 @@ export class ActesService {
     );
   }
 
-  /** BF-28 : position, frise des visas, droits de l'agent sur l'étape courante (fiche D2, C9). */
+  /** BF-28 : position, frise des visas, droits de l'agent sur l'étape courante. */
   async suivi(id: string, u: UtilisateurConnecte) {
     await this.verifierLecture(await this.charger(id), u);
     return this.circuits.suivi(id, u);
@@ -303,7 +300,7 @@ export class ActesService {
     }
     const { version, ampliations, contenu, ...champs } = dto;
     return this.prisma.$transaction(async (tx) => {
-      // Verrou optimiste : aucune ligne modifiée si quelqu'un (un autre onglet) a enregistré entre-temps.
+      // Verrou optimiste : aucune ligne modifiée si la version a changé entre-temps → 409.
       const { count } = await tx.acte.updateMany({
         where: { id, version },
         data: {
@@ -325,7 +322,7 @@ export class ActesService {
     });
   }
 
-  // ─────────── Suppression (RG-16, C10) ───────────
+  // ─────────── Suppression (RG-16) ───────────
 
   async supprimer(id: string, u: UtilisateurConnecte) {
     const acte = await this.acteModifiable(id, u);
@@ -341,7 +338,7 @@ export class ActesService {
     this.events.emit(EVENEMENTS.ACTE_SUPPRIME, { acteurId: u.sub, action: EVENEMENTS.ACTE_SUPPRIME, ressourceType: 'acte', ressourceId: id, details: { objet: acte.objet } });
   }
 
-  // ─────────── Soumission (BF-22, RG-03, RG-07 ; C6, C7) ───────────
+  // ─────────── Soumission (BF-22, RG-03, RG-07) ───────────
 
   async soumettre(id: string, version: number, u: UtilisateurConnecte) {
     const acte = await this.acteModifiable(id, u);
@@ -411,7 +408,7 @@ export class ActesService {
     return { statut: StatutActe.EN_CIRCUIT, etape: { ordre: etapeDepart.ordre, libelle: etapeDepart.libelle } };
   }
 
-  // ─────────── Pièces jointes (BF-18, RG-24 ; C5) ───────────
+  // ─────────── Pièces jointes (BF-18, RG-24) ───────────
 
   async ajouterPiece(id: string, fichier: { originalname: string; size: number; buffer: Buffer }, u: UtilisateurConnecte) {
     await this.acteModifiable(id, u);

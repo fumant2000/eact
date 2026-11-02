@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -87,9 +88,10 @@ export class ActesController {
   @UseInterceptors(FileInterceptor('fichier', { limits: { fileSize: TAILLE_MAX_OCTETS, files: 1 } }))
   ajouterPiece(
     @Param('id', Uuid) id: string,
-    @UploadedFile() fichier: Express.Multer.File,
+    @UploadedFile() fichier: Express.Multer.File | undefined,
     @UtilisateurCourant() u: UtilisateurConnecte,
   ) {
+    if (!fichier) throw new BadRequestException({ code: 'FICHIER_MANQUANT', message: 'Joignez un fichier (champ « fichier »)' });
     return this.actes.ajouterPiece(id, fichier, u);
   }
 
