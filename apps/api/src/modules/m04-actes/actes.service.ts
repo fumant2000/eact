@@ -179,6 +179,21 @@ export class ActesService {
     if (acte.redacteurId === u.sub || acte.signataireId === u.sub) return;
     // RG-15 : le signataire fait partie du circuit ; à « prêt à signer », le Ministre ouvre aussi les actes confidentiels.
     if (acte.statut === StatutActe.PRET_A_SIGNER && u.roles.includes(Role.AUTORITE_SIGNATAIRE)) return;
+    // … de même pour un délégataire (signature ou intérim) du Ministre, dont la délégation est en cours (BF-09).
+    if (acte.statut === StatutActe.PRET_A_SIGNER) {
+      const maintenant = new Date();
+      const delegue = await this.prisma.delegation.count({
+        where: {
+          delegataireId: u.sub,
+          actif: true,
+          debut: { lte: maintenant },
+          fin: { gte: maintenant },
+          delegant: { roles: { some: { role: Role.AUTORITE_SIGNATAIRE } } },
+          OR: [{ type: 'INTERIM' }, { perimetre: { has: acte.typeActe.code } }, { perimetre: { isEmpty: true } }],
+        },
+      });
+      if (delegue) return;
+    }
     // Membres du circuit : ceux qui ont visé et ceux à qui revient l'étape courante (RG-04, RG-15).
     if (await this.circuits.estMembreDuCircuit(acte.id, u)) return;
     const autorite = u.roles.some((r) => r === Role.SECRETAIRE_GENERAL || r === Role.AUTORITE_SIGNATAIRE);

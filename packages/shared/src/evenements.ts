@@ -25,6 +25,9 @@ export const EVENEMENTS = {
   REINITIALISATION_DEMANDEE: 'utilisateur.reinitialisation_demandee',
   MOT_DE_PASSE_REINITIALISE: 'utilisateur.mot_de_passe_reinitialise',
   DROITS_MODIFIES: 'utilisateur.droits_modifies',
+  DELEGATION_CREEE: 'delegation.creee',
+  DELEGATION_REVOQUEE: 'delegation.revoquee',
+  DELEGATION_EXPIREE: 'delegation.expiree',
   PIECE_ANALYSEE: 'piece.analysee',
   ANOMALIE_SIGNALEE: 'anomalie.signalee',
 } as const;

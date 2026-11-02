@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
+import { DelegationsController } from './delegations.controller';
+import { DelegationsService } from './delegations.service';
 
 /**
  * M02 — Organisation, utilisateurs et délégations
  * Exigences : BF-06 à BF-10 · Priorité : P0
- * Interface fournie : IUtilisateurs, IStructures, IDelegations
- *
- * Organisation interne : *.controller.ts → *.service.ts → *.repository.ts
- * Règle : n'importer d'un autre module que son interface ou ses événements.
+ * Interfaces fournies : IUtilisateurs, IStructures, IDelegations
  */
-@Module({})
+@Module({ controllers: [DelegationsController], providers: [DelegationsService], exports: [DelegationsService] })
 export class OrganisationModule {}

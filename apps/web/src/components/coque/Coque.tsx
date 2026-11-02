@@ -47,7 +47,7 @@ const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
       { href: '/parapheur', cle: 'menu.parapheur', icone: Inbox, roles: ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'], compteur: 'parapheur' },
       { href: '/signature', cle: 'menu.signature', icone: PenTool, roles: ['AUTORITE_SIGNATAIRE', 'DELEGATAIRE_SIGNATURE'], compteur: 'signature' },
       { href: '/mes-actes', cle: 'menu.mesActes', icone: Files, roles: ['REDACTEUR'] },
-      { href: '/delegations', cle: 'menu.delegations', icone: UserCog, roles: ['AUTORITE_SIGNATAIRE', 'SECRETAIRE_GENERAL', 'ADMINISTRATEUR'], bientot: true },
+      { href: '/delegations', cle: 'menu.delegations', icone: UserCog, roles: ['AUTORITE_SIGNATAIRE', 'SECRETAIRE_GENERAL', 'VISEUR', 'JURISTE', 'TRADUCTEUR', 'DELEGATAIRE_SIGNATURE'] },
     ],
   },
   {
@@ -159,7 +159,7 @@ export function Coque({ children }: { children: ReactNode }) {
   }
   const p = session.profil;
   // Un délégataire de signature en cours (BF-09) voit l'entrée « À signer » comme le titulaire.
-  const rolesMenu = p.delegationsActives.some((d) => d.type === 'SIGNATURE') ? [...p.roles, 'DELEGATAIRE_SIGNATURE'] : p.roles;
+  const rolesMenu = p.delegationsActives.length ? [...p.roles, 'DELEGATAIRE_SIGNATURE'] : p.roles;
   const reste = session.resteAvantFermeture;
 
   return (

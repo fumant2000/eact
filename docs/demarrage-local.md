@@ -15,6 +15,7 @@ Prérequis : Node 22, Docker Desktop démarré.
 cp .env.example .env        # la première fois ; changer les secrets si besoin
 npm install
 npm run infra               # postgres + redis + mailpit (Docker)
+npm run infra:pdf           # gotenberg : PDF/A des actes signés (~1 Go de RAM, à lancer pour la signature)
 npm run db:migrate          # applique les migrations Prisma
 npm run db:seed             # organigramme, types d'actes, circuit NS, gabarits, comptes de démo
 npm run dev:api             # terminal 1 → http://localhost:3000/docs (Swagger)
@@ -39,7 +40,7 @@ migrations et seed). Arrêter les conteneurs : `npm run infra:down`.
 | Mailpit | ✅ | Faux serveur SMTP : réinitialisation du mot de passe, notifications | Toujours en dev ; **démontrable en direct** |
 | API NestJS | ✅ (poste) | Logique métier, 15 modules | Toujours |
 | Web Next.js | ✅ (poste) | Interface MVVM | Toujours |
-| Gotenberg | ⏸ `npm run infra:pdf` | Conversion en PDF/A de l'acte signé (BF-32) | Dès que la signature (M06) est branchée |
+| Gotenberg | ✅ `npm run infra:pdf` | Conversion en PDF/A de l'acte signé (BF-32) | Pour toute démo de signature ; sans lui l'acte est signé et numéroté, le PDF est produit dès qu'il revient |
 | Worker | ⏸ | Traitements asynchrones (PDF/A, antivirus, e-mails, GitHub) | Avec M06 et M12 |
 | RustFS (S3) | ⏸ | Stockage objet des PDF/A et des pièces | Remplacé en mode léger par le disque local (`STOCKAGE=local`, dossier `apps/api/.stockage`) |
 | ClamAV | ⏸ | Antivirus des pièces jointes (RG-24) ; ~1 Go de RAM et mises à jour Internet | Simulé en mode léger (`ANTIVIRUS=simule` : refuse le fichier de test EICAR) ; ClamAV réel en mode complet |
@@ -49,7 +50,12 @@ migrations et seed). Arrêter les conteneurs : `npm run infra:down`.
 ## 3. Comptes de démonstration
 
 Mot de passe commun : `Minesup@2026` (variable `DEMO_MOT_DE_PASSE`). Ces comptes ne sont jamais créés en production.
-Sur la page de connexion, un encart « Comptes de démonstration » (visible en développement seulement) remplit le formulaire.
+
+**Mode démonstration** (`DEMO_MODE=true` dans `.env`, ignoré si `NODE_ENV=production`) : sur la page de connexion,
+le panneau « Mode démonstration » permet d'**entrer en un clic** dans n'importe quel compte (le verrouillage éventuel
+est levé), ou de **pré-remplir** le formulaire pour montrer le parcours normal. Sur les écrans de second facteur,
+d'enrôlement et de signature, le **code de vérification courant s'affiche** avec un bouton « Utiliser » :
+aucun téléphone n'est nécessaire.
 
 | Matricule | Personne (fictive) | Rôles | Second facteur |
 |---|---|---|---|
@@ -65,7 +71,7 @@ Sur la page de connexion, un encart « Comptes de démonstration » (visible en 
 **TOTP des comptes Ministre et SG** : dans Google Authenticator, Microsoft Authenticator ou FreeOTP,
 « Saisir une clé de configuration » → clé `JBSWY3DPEHPK3PXP`, type « basé sur l'heure ».
 
-## 4. Scénario de démonstration (état actuel : M01, M04, M10)
+## 4. Scénario de démonstration (état actuel : M01, M04, M05, M06, M10, M13)
 
 1. **Connexion et rôles** : se connecter en rédactrice → « Mon travail » n'affiche que ses entrées de menu.
 2. **Verrouillage (BF-03)** : 5 mauvais mots de passe sur Daniel FOTSO → message « il vous reste n essais »,
@@ -90,9 +96,24 @@ Sur la page de connexion, un encart « Comptes de démonstration » (visible en 
    Pour montrer TF-13, modifier une ligne en base (le trigger refuse ; en le désactivant, la vérification
    signale la rupture à l'entrée exacte).
 
-À venir dans les itérations suivantes, démontrables de la même façon : parapheur et visas,
-signature avec TOTP (numéro `N° 26/0001/NS/MINESUP/SG/DAG`), PDF/A avec QR (Gotenberg),
-page publique de vérification, notification par e-mail dans Mailpit.
+10. **Circuit de visas (M05)** : la rédactrice soumet → Mailpit montre « Un acte attend votre visa » envoyé à
+    Marie BELINGA (cheffe de service) → elle vise en 3 clics depuis son parapheur (5 s pour annuler) → Abdou NJOYA
+    (directeur) demande une correction en renvoyant au chef de service → nouveau visa → visa du SG.
+    La fiche de l'acte montre la frise : qui a visé, quand, avec quelle observation.
+11. **Signature (M06)** : entrer comme Ibrahim BELLO (SG, signataire par délégation pour NS, D, ATT) → « À signer »
+    → « Examiner » → bouton or « Signer » → code (affiché en mode démo) → référence `N° 26/0001/NS/MINESUP/SG/DAG`
+    attribuée en direct, puis le PDF/A apparaît (quelques secondes). Télécharger le PDF : en-tête bilingue,
+    cachet « Signé électroniquement », QR et code court.
+12. **Vérification publique (M13)** : scanner le QR avec un téléphone → page « Acte authentique », sans compte.
+    Déposer le PDF reçu : « identique ». Modifier le PDF (même un caractère) et le redéposer : « modifié ».
+
+### Faire scanner le QR par un téléphone de la salle
+
+Le QR contient `WEB_URL`. Par défaut `http://localhost:3001`, injoignable depuis un téléphone. Avant la démo :
+1. relever l'adresse du PC sur le réseau de la salle (`ipconfig` → « Adresse IPv4 », ex. `192.168.1.20`) ;
+2. dans `.env`, mettre `WEB_URL=http://192.168.1.20:3001`, puis relancer `npm run dev:api` ;
+3. autoriser Node.js dans le pare-feu Windows (réseau privé) à la première demande ;
+4. les actes signés **après** ce changement portent la bonne adresse (le QR est imprimé dans le PDF).
 
 ## 5. Mode complet
 

@@ -51,12 +51,19 @@ export class SignatureService {
     const delegation = await this.prisma.delegation.findFirst({
       where: {
         delegataireId: u.sub,
-        type: TypeDelegation.SIGNATURE,
         actif: true,
         debut: { lte: maintenant },
         fin: { gte: maintenant },
-        OR: [{ perimetre: { has: codeType } }, { perimetre: { isEmpty: true } }],
+        delegant: { actif: true, roles: { some: { role: Role.AUTORITE_SIGNATAIRE } } },
+        OR: [
+          // Délégation de signature : les types cochés (vide = tous)
+          { type: TypeDelegation.SIGNATURE, perimetre: { has: codeType } },
+          { type: TypeDelegation.SIGNATURE, perimetre: { isEmpty: true } },
+          // Intérim du Ministre : l'ensemble de ses attributions (maquette F2)
+          { type: TypeDelegation.INTERIM },
+        ],
       },
+      orderBy: { type: 'asc' }, // la délégation de signature dédiée (et sa mention) passe avant l'intérim
     });
     if (!delegation) return { peut: false as const, raison: 'INCOMPETENT' };
     return { peut: true as const, qualite: delegation.mention, delegationId: delegation.id };
