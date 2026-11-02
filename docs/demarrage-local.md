@@ -41,8 +41,8 @@ migrations et seed). Arrêter les conteneurs : `npm run infra:down`.
 | Web Next.js | ✅ (poste) | Interface MVVM | Toujours |
 | Gotenberg | ⏸ `npm run infra:pdf` | Conversion en PDF/A de l'acte signé (BF-32) | Dès que la signature (M06) est branchée |
 | Worker | ⏸ | Traitements asynchrones (PDF/A, antivirus, e-mails, GitHub) | Avec M06 et M12 |
-| RustFS (S3) | ⏸ | Stockage objet des PDF/A et des pièces | En mode léger, sera remplacé par le disque local (`STOCKAGE=local`, adaptateur à écrire avec M04 pièces) |
-| ClamAV | ⏸ | Antivirus des pièces jointes (RG-24) ; ~1 Go de RAM et mises à jour Internet | En mode léger, sera simulé (`ANTIVIRUS=simule`, adaptateur à écrire avec M04 pièces) ; à montrer en mode complet |
+| RustFS (S3) | ⏸ | Stockage objet des PDF/A et des pièces | Remplacé en mode léger par le disque local (`STOCKAGE=local`, dossier `apps/api/.stockage`) |
+| ClamAV | ⏸ | Antivirus des pièces jointes (RG-24) ; ~1 Go de RAM et mises à jour Internet | Simulé en mode léger (`ANTIVIRUS=simule` : refuse le fichier de test EICAR) ; ClamAV réel en mode complet |
 | nginx | ⏸ | Point d'entrée unique, TLS, limitation de débit (CT-12) | Mode complet |
 | Prometheus, Grafana, Loki, Alloy | ⏸ | Supervision (ENF-03) | `docker compose --profile obs up -d`, pour la soutenance |
 
@@ -65,7 +65,7 @@ Sur la page de connexion, un encart « Comptes de démonstration » (visible en 
 **TOTP des comptes Ministre et SG** : dans Google Authenticator, Microsoft Authenticator ou FreeOTP,
 « Saisir une clé de configuration » → clé `JBSWY3DPEHPK3PXP`, type « basé sur l'heure ».
 
-## 4. Scénario de démonstration (état actuel : M01 + M10)
+## 4. Scénario de démonstration (état actuel : M01, M04, M10)
 
 1. **Connexion et rôles** : se connecter en rédactrice → « Mon travail » n'affiche que ses entrées de menu.
 2. **Verrouillage (BF-03)** : 5 mauvais mots de passe sur Daniel FOTSO → message « il vous reste n essais »,
@@ -76,11 +76,21 @@ Sur la page de connexion, un encart « Comptes de démonstration » (visible en 
    → confirmer → 8 codes de secours à télécharger.
 5. **Mot de passe oublié (BF-05)** : « Mot de passe oublié ? » → ouvrir Mailpit (http://localhost:8025)
    devant la salle → cliquer le lien → politique de mot de passe vérifiée en direct → le lien ne fonctionne qu'une fois.
-6. **Traçabilité (BF-48 → BF-50)** : se connecter en auditrice → Journal d'audit → « Vérifier l'intégrité ».
+6. **Rédaction (UC-06)** : en rédactrice, « Nouvel acte » → Note de service → modèle « standard DAG » →
+   l'en-tête officiel SG / DAG et l'ampliation sont pré-remplis ; saisir l'objet et le texte (« + Article »),
+   l'indicateur « Enregistré à … » suit chaque frappe. Cliquer « Soumettre » sans objet : la liste des
+   champs manquants s'affiche (RG-03).
+7. **Pièces jointes et pipeline (BF-18, RG-24)** : déposer un PDF → « Analyse antivirus en cours » puis
+   « Disponible ». Déposer un `.exe` renommé en `.pdf` → refusé par le filtre 1 (le type est lu dans le
+   contenu, pas dans le nom). Le fichier de test EICAR est bloqué par l'antivirus simulé, mais Windows Defender
+   le supprime souvent avant même l'envoi : c'est en soi une bonne illustration.
+8. **Soumission (BF-22)** : confirmer → l'acte passe « En circuit », à l'étape « Visa du chef de service » ;
+   il n'est plus modifiable et ne peut plus être supprimé (RG-16).
+9. **Traçabilité (BF-48 → BF-50)** : se connecter en auditrice → Journal d'audit → « Vérifier l'intégrité ».
    Pour montrer TF-13, modifier une ligne en base (le trigger refuse ; en le désactivant, la vérification
    signale la rupture à l'entrée exacte).
 
-À venir dans les itérations suivantes, démontrables de la même façon : rédaction et circuit de visas,
+À venir dans les itérations suivantes, démontrables de la même façon : parapheur et visas,
 signature avec TOTP (numéro `N° 26/0001/NS/MINESUP/SG/DAG`), PDF/A avec QR (Gotenberg),
 page publique de vérification, notification par e-mail dans Mailpit.
 

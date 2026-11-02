@@ -23,7 +23,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { SelecteurLangue } from '@/components/SelecteurLangue';
-import { Button } from '@/components/ui/primitives';
+import { Button, classesBouton } from '@/components/ui/primitives';
 import { useSession } from '@/features/auth/view-model/useSession';
 import { useT, type CleTraduction } from '@/i18n';
 
@@ -42,7 +42,7 @@ const SECTIONS: { cle: CleTraduction; entrees: EntreeMenu[] }[] = [
       { href: '/mon-travail', cle: 'menu.monTravail', icone: Home },
       { href: '/parapheur', cle: 'menu.parapheur', icone: Inbox, roles: ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'], bientot: true },
       { href: '/signature', cle: 'menu.signature', icone: PenTool, roles: ['AUTORITE_SIGNATAIRE'], bientot: true },
-      { href: '/mes-actes', cle: 'menu.mesActes', icone: Files, roles: ['REDACTEUR'], bientot: true },
+      { href: '/mes-actes', cle: 'menu.mesActes', icone: Files, roles: ['REDACTEUR'] },
       { href: '/delegations', cle: 'menu.delegations', icone: UserCog, roles: ['AUTORITE_SIGNATAIRE', 'SECRETAIRE_GENERAL', 'ADMINISTRATEUR'], bientot: true },
     ],
   },
@@ -67,9 +67,9 @@ function BarreLaterale({ roles, onNaviguer }: { roles: string[]; onNaviguer?: ()
   return (
     <nav className="flex h-full flex-col gap-6 p-4" aria-label="Navigation principale">
       {roles.includes('REDACTEUR') && (
-        <Button size="lg" className="w-full" disabled title={t('menu.bientot')}>
+        <Link href="/actes/nouveau" onClick={onNaviguer} className={classesBouton({ size: 'lg', className: 'w-full' })}>
           <Plus size={18} aria-hidden /> {t('menu.nouvelActe')}
-        </Button>
+        </Link>
       )}
       {SECTIONS.map((s) => {
         const visibles = s.entrees.filter((e) => !e.roles || e.roles.some((r) => roles.includes(r)));
@@ -129,6 +129,8 @@ export function Coque({ children }: { children: ReactNode }) {
   const [menuProfil, setMenuProfil] = useState(false);
   const chemin = usePathname();
   useEffect(() => setTiroir(false), [chemin]);
+  // Mode concentration : l'éditeur d'acte masque la barre latérale (guide d'implémentation §5, point 3).
+  const concentration = /^\/actes\/[^/]+\/edition$/.test(chemin);
 
   if (!session.profil) {
     return <p className="grid min-h-screen place-items-center text-muted-foreground">{t('commun.chargement')}</p>;
@@ -140,7 +142,7 @@ export function Coque({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <a href="#contenu" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-card focus:p-2">Aller au contenu</a>
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 bg-primary-800 px-4 text-white">
-        <button className="grid size-11 place-items-center rounded-md lg:hidden" aria-label="Menu" aria-expanded={tiroir} onClick={() => setTiroir(true)}>
+        <button className={`grid size-11 place-items-center rounded-md ${concentration ? '' : 'lg:hidden'}`} aria-label="Menu" aria-expanded={tiroir} onClick={() => setTiroir(true)}>
           <Menu size={22} />
         </button>
         <Link href="/mon-travail" className="flex items-center gap-3">
@@ -177,11 +179,11 @@ export function Coque({ children }: { children: ReactNode }) {
       </header>
 
       <div className="flex flex-1">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-62 shrink-0 border-r border-border bg-card lg:block">
+        <aside className={`sticky top-16 hidden h-[calc(100vh-4rem)] w-62 shrink-0 border-r border-border bg-card ${concentration ? '' : 'lg:block'}`}>
           <BarreLaterale roles={p.roles} />
         </aside>
         {tiroir && (
-          <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal aria-label="Menu">
+          <div className={`fixed inset-0 z-40 ${concentration ? '' : 'lg:hidden'}`} role="dialog" aria-modal aria-label="Menu">
             <button className="absolute inset-0 bg-black/40" aria-label="Fermer le menu" onClick={() => setTiroir(false)} />
             <aside className="relative h-full w-72 max-w-[85vw] bg-card">
               <button className="absolute top-3 right-3 grid size-11 place-items-center" aria-label="Fermer le menu" onClick={() => setTiroir(false)}>

@@ -3,19 +3,24 @@
 // S-02 « Mon travail » : page d'arrivée. Les compteurs seront alimentés par le parapheur (It. 2).
 import { FilePen, Inbox, PenTool, Undo2, UserCog } from 'lucide-react';
 import { Alert } from '@/components/ui/primitives';
+import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
+import { actesApi } from '@/features/actes/model/actes.api';
 import { useProfil } from '@/features/auth/view-model/useSession';
 import { useT, type CleTraduction } from '@/i18n';
 
 const COMPTEURS = [
   { cle: 'monTravail.aViser', icone: Inbox, roles: ['VISEUR', 'JURISTE', 'TRADUCTEUR', 'SECRETAIRE_GENERAL'] },
   { cle: 'monTravail.aSigner', icone: PenTool, roles: ['AUTORITE_SIGNATAIRE'] },
-  { cle: 'monTravail.aCorriger', icone: Undo2, roles: ['REDACTEUR'] },
-  { cle: 'monTravail.brouillons', icone: FilePen, roles: ['REDACTEUR'] },
+  { cle: 'monTravail.aCorriger', icone: Undo2, roles: ['REDACTEUR'], groupe: 'aCorriger', lien: '/mes-actes' },
+  { cle: 'monTravail.brouillons', icone: FilePen, roles: ['REDACTEUR'], groupe: 'brouillons', lien: '/mes-actes' },
 ] as const;
 
 export default function MonTravailPage() {
   const { t, langue } = useT();
   const { data: profil } = useProfil();
+  const redacteur = !!profil?.roles.includes('REDACTEUR');
+  const { data: mesActes } = useQuery({ queryKey: ['mes-actes'], queryFn: actesApi.mesActes, enabled: redacteur });
   if (!profil) return null;
   const visibles = COMPTEURS.filter((c) => c.roles.some((r) => profil.roles.includes(r)));
 
@@ -42,10 +47,14 @@ export default function MonTravailPage() {
       {visibles.length > 0 && (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {visibles.map((c) => (
-            <li key={c.cle} className="rounded-lg border border-border bg-card p-5">
+            <li key={c.cle} className="relative rounded-lg border border-border bg-card p-5 hover:border-primary-300">
               <c.icone size={20} className="text-primary" aria-hidden />
-              <p className="mt-3 text-3xl font-semibold tabular-nums">0</p>
-              <p className="text-muted-foreground">{t(c.cle)}</p>
+              <p className="mt-3 text-3xl font-semibold tabular-nums">{'groupe' in c && mesActes ? mesActes.compteurs[c.groupe] : 0}</p>
+              {'lien' in c ? (
+                <Link href={c.lien} className="text-muted-foreground after:absolute after:inset-0">{t(c.cle)}</Link>
+              ) : (
+                <p className="text-muted-foreground">{t(c.cle)}</p>
+              )}
             </li>
           ))}
         </ul>

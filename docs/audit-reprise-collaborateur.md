@@ -84,9 +84,26 @@ Volume : backend 1 231 lignes (5 modules, 18 routes) ; frontend ~2 000 lignes (7
   rejoués à travers le proxy Next ; **TF-13** vérifié : le trigger refuse la modification d'une entrée, et une
   falsification forcée est détectée à l'entrée exacte.
 
+### Mise à jour — M04 Rédaction (2 novembre 2026)
+
+- **API** : types rédigeables selon le circuit de la structure (UC-06, précondition), gabarits servis depuis le
+  cache (RG-23), création avec structure émettrice déduite de l'organigramme (une agente du SP émet pour la DAG),
+  enregistrement automatique avec verrou optimiste (409), HTML nettoyé côté serveur, contrôle RG-03 paramétrable
+  par type (objet, texte, ampliation), suppression limitée aux brouillons jamais soumis (RG-16), soumission
+  transactionnelle (version figée, journal, étape de départ).
+- **Pipeline tubes et filtres** (CDC §13.1) : type lu dans le contenu, antivirus, empreinte SHA-256 ; filtres
+  PDF/A, OCR et indexation présents mais désactivés. Stockage disque (mode léger) ou S3, antivirus simulé ou ClamAV.
+- **Web** : C1 « Mes actes », C2/C3 assistant avec aperçu, C4 éditeur riche (TipTap) en mode concentration,
+  C5 pièces avec progression et états d'analyse, C6 champs manquants, C7 confirmation, C10 suppression.
+- **Recette** : 32 contrôles M04 de bout en bout, rejoués via le proxy Next (pièce de 15 Mo acceptée, 21 Mo refusée).
+- **Bug corrigé dans le socle** : l'empreinte du journal d'audit dépendait de l'ordre des clés de `details`,
+  que PostgreSQL réordonne (jsonb) ; une entrée intègre pouvait être déclarée falsifiée. Sérialisation canonique
+  et tests unitaires ajoutés. Les entrées écrites avant la correction restent fausses : remettre la base de dev à
+  zéro (`npm run db:reset`).
+
 ## 7. Suite du P0 (ordre proposé)
 
-1. **M04 Rédaction** (C1 → C7) : liste « Mes actes », nouvel acte depuis un gabarit, éditeur, soumission (RG-03).
+1. ~~M04 Rédaction~~ : fait (voir ci-dessus). Restent BF-20 versions et comparaison (C8) et l'aperçu PDF.
 2. **M05 Parapheur** (D1 → D8) : file par rôle et structure, viser / corriger / rejeter, verrou optimiste (409).
 3. **M06 Signature** (E1 → E6) : TOTP de moins de 5 min (RG-12), séquenceur déjà écrit (`signature.service.ts`),
    idempotence, PDF/A par Gotenberg + QR + SHA-256.
