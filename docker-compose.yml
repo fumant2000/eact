@@ -1,17 +1,10 @@
 # EACT — Docker Compose (CT-09, ENF-15)
-#
-#   cp .env.example .env
-#   docker compose up -d                      # DÉMO COMPLÈTE en une commande → http://localhost:8080
-#                                             #   (images construites au premier lancement ; après une
-#                                             #    modification du code : docker compose up -d --build)
-#   docker compose --profile antivirus up -d  # + ClamAV réel (~1 Go de RAM, mises à jour Internet)
-#   docker compose --profile obs up -d        # + prometheus / grafana / loki / alloy
-#
-#   Développement avec rechargement à chaud (mode léger) : npm run infra, puis npm run dev:api / dev:web.
-#
-# Les adresses ci-dessous sont des NOMS DE SERVICE Docker (transparence de localisation, CDC §16.5) :
-# elles ne viennent pas du .env, qui décrit le poste du développeur (localhost).
-# Zones réseau (ADR 0006) : seul `nginx` publie un port (les ports de dev sont dans docker-compose.override.yml).
+#   cp .env.example .env && docker compose up -d   # démo complète → http://localhost:8080
+#   docker compose --profile antivirus up -d        # + ClamAV réel (~1 Go de RAM, avec ANTIVIRUS_CONTENEURS=clamav)
+#   docker compose --profile obs up -d              # + prometheus / grafana / loki / alloy
+#   Mode léger (rechargement à chaud) : npm run infra, puis npm run dev:api / dev:web
+# Adresses = noms de service Docker, pas celles du .env (poste du développeur).
+# Zones réseau (ADR 0006) : seul nginx publie un port ; ports de dev dans docker-compose.override.yml.
 
 name: eact
 
@@ -34,12 +27,12 @@ x-app-env: &app-env
   SMTP_HOST: mailpit
   SMTP_PORT: 1025
   MAIL_FROM: ${MAIL_FROM:-EACT MINESUP <ne-pas-repondre@eact.test>}
-  # Antivirus simulé par défaut (refuse le fichier test EICAR) ; ClamAV réel : ANTIVIRUS_CONTENEURS=clamav + profil antivirus
+  # simulé par défaut (refuse le fichier test EICAR)
   ANTIVIRUS: ${ANTIVIRUS_CONTENEURS:-simule}
   STOCKAGE: s3
-  # URL publique de l'application : liens des e-mails et QR imprimé sur les actes (mettre l'IP du poste pour un téléphone)
+  # liens des e-mails et QR imprimé sur les actes
   WEB_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-  # Mode démonstration : connexion en un clic, code TOTP affiché (désactivé de force en production)
+  # connexion en un clic, code TOTP affiché ; toujours inactif si NODE_ENV=production
   DEMO_MODE: ${DEMO_MODE:-false}
   DEMO_MOT_DE_PASSE: ${DEMO_MOT_DE_PASSE:-Minesup@2026}
   GITHUB_APP_ID: ${GITHUB_APP_ID:-}
@@ -65,7 +58,7 @@ services:
 
   # ─────────────── Zone applicative ───────────────
   web:
-    pull_policy: build   # « docker compose up -d » reconstruit le code modifié (cache Docker : rapide sinon)
+    pull_policy: build   # « up -d » reconstruit le code modifié (rapide grâce au cache)
     build:
       context: .
       dockerfile: apps/web/Dockerfile
@@ -76,13 +69,9 @@ services:
     networks: [app]
     restart: unless-stopped
 
-  # Applique les migrations Prisma, charge les données de démarrage (seed idempotent : organigramme, types,
-  # circuits, gabarits ; comptes de démo hors production), puis s'arrête. L'API ne démarre qu'après.
+  # Migrations Prisma + seed idempotent (comptes de démo hors production), puis s'arrête ; api/worker l'attendent.
   migrate:
-    pull_policy: build   # « docker compose up -d » reconstruit le code modifié (cache Docker : rapide sinon)
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    pull_policy: never   # image construite par le service api (une seule construction, pas de conflit au 1er lancement)
     image: eact/api:local
     command: ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts"]
     environment: *app-env
@@ -92,7 +81,7 @@ services:
     restart: "no"
 
   api:
-    pull_policy: build   # « docker compose up -d » reconstruit le code modifié (cache Docker : rapide sinon)
+    pull_policy: build
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -113,13 +102,9 @@ services:
     networks: [app, data]
     restart: unless-stopped
 
-  # Même image que l'API, autre point d'entrée : files BullMQ (PDF/A, antivirus,
-  # GitHub, notifications, relances). Seul service autorisé à sortir sur Internet.
+  # Même image que l'API : files BullMQ (PDF/A et antivirus, GitHub, notifications, relances) ; egress pour GitHub.
   worker:
-    pull_policy: build   # « docker compose up -d » reconstruit le code modifié (cache Docker : rapide sinon)
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    pull_policy: never   # image construite par le service api
     image: eact/api:local
     command: ["node", "dist/worker.js"]
     environment: *app-env
@@ -133,12 +118,12 @@ services:
 
   gotenberg:
     image: gotenberg/gotenberg:8
-    # Chromium et LibreOffice démarrés au lancement : sinon le premier PDF/A attend leur démarrage à froid (> 20 s sous Docker Desktop)
+    # Chromium et LibreOffice préchauffés : évite le démarrage à froid au premier PDF/A
     command: ["gotenberg", "--api-timeout=60s", "--log-level=warn", "--chromium-auto-start", "--chromium-start-timeout=60s", "--libreoffice-auto-start", "--libreoffice-start-timeout=60s"]
     networks: [app]
     restart: unless-stopped
 
-  # Lourd (~1 Go de RAM, signatures téléchargées au démarrage) : profil « antivirus », avec ANTIVIRUS_CONTENEURS=clamav.
+  # Utilisé seulement si ANTIVIRUS_CONTENEURS=clamav ; toujours actif en production.
   clamav:
     image: clamav/clamav:1.4
     profiles: [antivirus]
@@ -160,7 +145,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      TZ: Africa/Douala   # fuseau IANA de tout le Cameroun (Yaoundé compris)
+      TZ: Africa/Douala   # fuseau du Cameroun
     volumes:
       - pg-data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -185,8 +170,7 @@ services:
     networks: [data]
     restart: unless-stopped
 
-  # Stockage objet compatible S3 (ADR 0005). RustFS (Apache-2.0) remplace MinIO, dont les images
-  # officielles ne sont plus publiées. Le métier ne voit que IStockage : changer de serveur S3 = changer ce bloc.
+  # Stockage objet S3 (ADR 0005) : RustFS, MinIO n'étant plus publié ; le code ne dépend que de IStockage.
   s3:
     image: rustfs/rustfs:1.0.4
     environment:
@@ -203,7 +187,7 @@ services:
     networks: [data]
     restart: unless-stopped
 
-  # Crée les buckets au premier démarrage puis s'arrête. Client S3 générique : indépendant du serveur.
+  # Crée les buckets manquants (idempotent) puis s'arrête.
   s3-init:
     image: amazon/aws-cli:2.39.3
     depends_on:
@@ -227,8 +211,7 @@ services:
     restart: "no"
 
   # ─────────────── Outil de dev et de démo ───────────────
-  # Faux serveur SMTP : capte TOUS les e-mails (réinitialisation, notifications) ; boîte web sur :8025.
-  # Retiré en production (docker-compose.prod.yml).
+  # Faux SMTP : capte tous les e-mails, boîte web sur :8025 ; retiré en production.
   mailpit:
     image: axllent/mailpit:v1.27
     networks: [app]
@@ -291,4 +274,4 @@ volumes:
 
 secrets:
   github_app_key:
-    file: ${GITHUB_APP_KEY_FILE:-./infra/secrets/github-app.pem}
+    file: ${GITHUB_APP_KEY_FILE:-./infra/secrets/github-app.pem.example}

@@ -2,7 +2,7 @@
 const { randomUUID } = require('node:crypto');
 const { execSync } = require('node:child_process');
 const { authenticator } = require(require.resolve('otplib', { paths: [require('node:path').join(__dirname, '..', '..', 'apps', 'api')] }));
-const API = process.env.EACT_API ?? 'http://localhost:8080/api';
+const API = process.env.EACT_API ?? 'http://localhost:3000';
 const MAILPIT = process.env.EACT_MAILPIT ?? 'http://localhost:8025/api/v1';
 const MDP = 'Minesup@2026';
 const SECRET = 'JBSWY3DPEHPK3PXP';

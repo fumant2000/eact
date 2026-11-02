@@ -24,7 +24,7 @@ Comptes, scénario de présentation, QR scanné par un téléphone et développe
 
 ## Pile
 
-Next.js (MVVM) · NestJS (monolithe modulaire) · Prisma · PostgreSQL 16 · Redis + BullMQ · MinIO (S3) ·
+Next.js (MVVM) · NestJS (monolithe modulaire) · Prisma · PostgreSQL 16 · Redis + BullMQ · RustFS (S3) ·
 Gotenberg (PDF/A) · ClamAV · Nginx · Prometheus / Grafana / Loki · GitHub Actions.
 
 ## Documentation

@@ -22,8 +22,8 @@
     "db:reset": "npm run prisma:reset -w @eact/api",
     "dev": "docker compose up -d",
     "down": "docker compose --profile antivirus --profile obs down",
-    "build": "npm run build --workspaces --if-present",
-    "lint": "npm run build -w @eact/shared && npm run lint --workspaces --if-present",
+    "build": "npm run prisma:generate -w @eact/api && npm run build --workspaces --if-present",
+    "lint": "npm run build -w @eact/shared && npm run prisma:generate -w @eact/api && npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {

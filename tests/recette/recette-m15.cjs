@@ -1,5 +1,5 @@
 // Recette M15 / M02 administration (BF-06 à BF-08, BF-64, BF-65, ENF-08).
-const API = process.env.EACT_API ?? 'http://localhost:8080/api';
+const API = process.env.EACT_API ?? 'http://localhost:3000';
 const MAILPIT = process.env.EACT_MAILPIT ?? 'http://localhost:8025/api/v1';
 let ok = 0, ko = 0;
 const verifier = (nom, cond, info = '') => { cond ? ok++ : ko++; console.log(`${cond ? 'OK ' : 'KO '} ${nom}${info !== '' ? ' — ' + info : ''}`); };

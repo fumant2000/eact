@@ -1,7 +1,7 @@
 // Recette M02 délégations (BF-09, BF-10, RG-04, RG-11).
 const { execSync } = require('node:child_process');
 const { authenticator } = require(require.resolve('otplib', { paths: [require('node:path').join(__dirname, '..', '..', 'apps', 'api')] }));
-const API = process.env.EACT_API ?? 'http://localhost:8080/api';
+const API = process.env.EACT_API ?? 'http://localhost:3000';
 let ok = 0, ko = 0;
 const verifier = (nom, cond, info = '') => { cond ? ok++ : ko++; console.log(`${cond ? 'OK ' : 'KO '} ${nom}${info !== '' ? ' — ' + info : ''}`); };
 const sql = (q) => execSync(`docker compose exec -T postgres psql -U eact -d eact -tAc "${q}"`, { cwd: require('node:path').join(__dirname, '..', '..') }).toString().trim();

@@ -1,6 +1,6 @@
 // Recette M05 (parapheur, visas, corrections, rejet) + notifications e-mail dans Mailpit.
 const { authenticator } = require(require.resolve('otplib', { paths: [require('node:path').join(__dirname, '..', '..', 'apps', 'api')] }));
-const API = process.env.EACT_API ?? 'http://localhost:8080/api';
+const API = process.env.EACT_API ?? 'http://localhost:3000';
 const MAILPIT = process.env.EACT_MAILPIT ?? 'http://localhost:8025/api/v1';
 const MDP = 'Minesup@2026';
 let ok = 0, ko = 0;
