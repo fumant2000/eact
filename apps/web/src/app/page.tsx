@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function Accueil() {
-  redirect('/parapheur');
+  redirect('/mon-travail');
 }

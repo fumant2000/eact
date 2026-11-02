@@ -13,13 +13,13 @@ export function ParapheurTable() {
     <section className="space-y-4">
       <header className="flex items-baseline gap-3">
         <h1 className="text-2xl font-semibold text-primary-900 dark:text-foreground">{fr['parapheur.titre']}</h1>
-        <p className="text-muted">{fr['parapheur.enAttente'].replace('{n}', String(vm.actes.length))}</p>
+        <p className="text-muted-foreground">{fr['parapheur.enAttente'].replace('{n}', String(vm.actes.length))}</p>
       </header>
 
       {vm.erreur && <p className="rounded-card bg-danger/10 p-3 text-danger">{vm.erreur}</p>}
 
       <ul className="divide-y divide-border rounded-card border border-border bg-surface">
-        {vm.isLoading && <li className="p-4 text-muted">Chargement…</li>}
+        {vm.isLoading && <li className="p-4 text-muted-foreground">Chargement…</li>}
         {vm.actes.map((acte) => (
           <li key={acte.id} className="flex flex-wrap items-center gap-3 p-4">
             <span className="reference rounded bg-primary-50 px-2 py-0.5 text-xs text-primary-700 dark:bg-primary-950 dark:text-primary-200">

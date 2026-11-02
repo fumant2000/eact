@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { HealthController } from './health/health.controller';
+import { InfrastructureModule } from './infrastructure/infrastructure.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { MODULES_METIER } from './modules';
 
@@ -11,6 +12,7 @@ import { MODULES_METIER } from './modules';
     // Bus d'événements interne : invocation implicite (CDC §11)
     EventEmitterModule.forRoot({ wildcard: true, delimiter: '.' }),
     PrismaModule,
+    InfrastructureModule,
     ...MODULES_METIER,
   ],
   controllers: [HealthController],

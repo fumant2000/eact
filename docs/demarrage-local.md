@@ -1,0 +1,94 @@
+# Démarrage local et démonstration
+
+Deux façons de lancer EACT :
+
+| Mode | Pour quoi | Ce qui tourne | RAM approx. |
+|---|---|---|---|
+| **Léger** (par défaut) | Développement quotidien, démonstrations en séance | Docker : PostgreSQL, Redis, Mailpit · Poste : API et web (rechargement à chaud) | ~1 Go |
+| Complet | Montrer l'architecture cible (CDC §15), tester les images | Tous les conteneurs derrière nginx | 3 à 4 Go |
+
+## 1. Mode léger
+
+Prérequis : Node 22, Docker Desktop démarré.
+
+```bash
+cp .env.example .env        # la première fois ; changer les secrets si besoin
+npm install
+npm run infra               # postgres + redis + mailpit (Docker)
+npm run db:migrate          # applique les migrations Prisma
+npm run db:seed             # organigramme, types d'actes, circuit NS, gabarits, comptes de démo
+npm run dev:api             # terminal 1 → http://localhost:3000/docs (Swagger)
+npm run dev:web             # terminal 2 → http://localhost:3001
+```
+
+| URL | Service |
+|---|---|
+| http://localhost:3001 | Application (le web relaie `/api` vers l'API, comme nginx en production) |
+| http://localhost:3000/docs | Swagger de l'API |
+| http://localhost:8025 | Mailpit : tous les e-mails envoyés par EACT arrivent ici, aucun ne sort |
+
+Repartir d'une base propre : `npm run db:reset` (**efface toutes les données** de la base locale, puis rejoue
+migrations et seed). Arrêter les conteneurs : `npm run infra:down`.
+
+## 2. Services : lesquels sont lancés, et à quoi servent les autres
+
+| Service | Mode léger | Rôle dans EACT | Quand l'allumer |
+|---|---|---|---|
+| PostgreSQL | ✅ | Référentiel unique : actes, séquenceur de numérotation (`FOR UPDATE`), journal d'audit en ajout seul | Toujours |
+| Redis | ✅ | Files BullMQ (PDF/A, e-mails, relances, GitHub) et cache | Toujours (léger) |
+| Mailpit | ✅ | Faux serveur SMTP : réinitialisation du mot de passe, notifications | Toujours en dev ; **démontrable en direct** |
+| API NestJS | ✅ (poste) | Logique métier, 15 modules | Toujours |
+| Web Next.js | ✅ (poste) | Interface MVVM | Toujours |
+| Gotenberg | ⏸ `npm run infra:pdf` | Conversion en PDF/A de l'acte signé (BF-32) | Dès que la signature (M06) est branchée |
+| Worker | ⏸ | Traitements asynchrones (PDF/A, antivirus, e-mails, GitHub) | Avec M06 et M12 |
+| RustFS (S3) | ⏸ | Stockage objet des PDF/A et des pièces | En mode léger, sera remplacé par le disque local (`STOCKAGE=local`, adaptateur à écrire avec M04 pièces) |
+| ClamAV | ⏸ | Antivirus des pièces jointes (RG-24) ; ~1 Go de RAM et mises à jour Internet | En mode léger, sera simulé (`ANTIVIRUS=simule`, adaptateur à écrire avec M04 pièces) ; à montrer en mode complet |
+| nginx | ⏸ | Point d'entrée unique, TLS, limitation de débit (CT-12) | Mode complet |
+| Prometheus, Grafana, Loki, Alloy | ⏸ | Supervision (ENF-03) | `docker compose --profile obs up -d`, pour la soutenance |
+
+## 3. Comptes de démonstration
+
+Mot de passe commun : `Minesup@2026` (variable `DEMO_MOT_DE_PASSE`). Ces comptes ne sont jamais créés en production.
+Sur la page de connexion, un encart « Comptes de démonstration » (visible en développement seulement) remplit le formulaire.
+
+| Matricule | Personne (fictive) | Rôles | Second facteur |
+|---|---|---|---|
+| MINESUP-04812 | Christelle EBOGO | Rédactrice · Service du Personnel | — |
+| MINESUP-02845 | Marie BELINGA | Chef de service (viseuse) · SP | — |
+| MINESUP-03107 | Abdou NJOYA | Directeur (viseur) · DAG | — |
+| MINESUP-00017 | Ibrahim BELLO | Secrétaire Général, signataire par délégation | TOTP actif |
+| MINESUP-00001 | Roger ESSOMBA | Ministre (autorité signataire) | TOTP actif |
+| MINESUP-02019 | Hervé TCHAMBA | Administrateur · DSI | **Enrôlement à la 1re connexion** |
+| MINESUP-07341 | Aïcha MOUSSA | Auditrice · IGS | — |
+| MINESUP-05520 / 06233 | Solange MBARGA / Daniel FOTSO | Juriste / Traducteur | — |
+
+**TOTP des comptes Ministre et SG** : dans Google Authenticator, Microsoft Authenticator ou FreeOTP,
+« Saisir une clé de configuration » → clé `JBSWY3DPEHPK3PXP`, type « basé sur l'heure ».
+
+## 4. Scénario de démonstration (état actuel : M01 + M10)
+
+1. **Connexion et rôles** : se connecter en rédactrice → « Mon travail » n'affiche que ses entrées de menu.
+2. **Verrouillage (BF-03)** : 5 mauvais mots de passe sur Daniel FOTSO → message « il vous reste n essais »,
+   puis écran de verrouillage avec compte à rebours de 15 min.
+3. **Second facteur (BF-02)** : se connecter en SG → saisir le code du téléphone → bandeau de délégation
+   « Pour le Ministre et par délégation… (NS, D, ATT) ».
+4. **Enrôlement en direct (B3)** : se connecter en administrateur → scanner le QR avec un téléphone de la salle
+   → confirmer → 8 codes de secours à télécharger.
+5. **Mot de passe oublié (BF-05)** : « Mot de passe oublié ? » → ouvrir Mailpit (http://localhost:8025)
+   devant la salle → cliquer le lien → politique de mot de passe vérifiée en direct → le lien ne fonctionne qu'une fois.
+6. **Traçabilité (BF-48 → BF-50)** : se connecter en auditrice → Journal d'audit → « Vérifier l'intégrité ».
+   Pour montrer TF-13, modifier une ligne en base (le trigger refuse ; en le désactivant, la vérification
+   signale la rupture à l'entrée exacte).
+
+À venir dans les itérations suivantes, démontrables de la même façon : rédaction et circuit de visas,
+signature avec TOTP (numéro `N° 26/0001/NS/MINESUP/SG/DAG`), PDF/A avec QR (Gotenberg),
+page publique de vérification, notification par e-mail dans Mailpit.
+
+## 5. Mode complet
+
+```bash
+docker compose --profile dev up -d --build    # http://localhost:8080 (nginx)
+```
+
+Dans les conteneurs, les adresses des services (postgres, mailpit, gotenberg…) sont fixées dans
+`docker-compose.yml` ; le `.env` ne décrit que le poste du développeur.

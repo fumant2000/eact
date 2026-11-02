@@ -8,3 +8,5 @@ coverage/
 !.env.example
 infra/nginx/certs/
 .DS_Store
+.stockage/
+*.tsbuildinfo

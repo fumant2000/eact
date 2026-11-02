@@ -17,7 +17,11 @@ services:
       - "127.0.0.1:${S3_CONSOLE_HOST_PORT:-9001}:9001"      # console RustFS
     networks: [data, devhost]
   mailpit:
-    ports: ["127.0.0.1:${MAILPIT_HOST_PORT:-8025}:8025"]    # boîte mail web
+    ports:
+      - "127.0.0.1:${MAILPIT_HOST_PORT:-8025}:8025"         # boîte mail web
+      - "127.0.0.1:${SMTP_PORT:-1025}:1025"                 # SMTP pour l'API lancée sur le poste
+  gotenberg:
+    ports: ["127.0.0.1:${GOTENBERG_HOST_PORT:-3002}:3000"]  # PDF/A pour l'API lancée sur le poste
   api:
     ports: ["127.0.0.1:${API_HOST_PORT:-3000}:3000"]        # Swagger : /docs
 

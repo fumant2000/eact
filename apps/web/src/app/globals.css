@@ -29,36 +29,59 @@
 
   --radius-card: 8px;
   --radius-control: 6px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 }
 
-/* Jetons sémantiques : changent entre clair et sombre */
+/* Jetons sémantiques — noms shadcn/ui (guide d'implémentation des maquettes P0, §1).
+   Changent entre clair et sombre. */
 :root {
   --background: #f7f8fb;
-  --surface: #ffffff;
-  --border: #e3e6ee;
   --foreground: #1a2033;
-  --muted: #5b6478;
+  --card: #ffffff;
+  --card-foreground: #1a2033;
   --primary: #2d3c8f;
   --primary-foreground: #ffffff;
+  --secondary: #ffffff;
+  --secondary-foreground: #1a2033;
+  --muted: #f1f3f7;
+  --muted-foreground: #5b6478;
+  --accent: #eef1fa;
+  --accent-foreground: #2d3c8f;
+  --destructive: #c0262d;
+  --destructive-foreground: #ffffff;
+  --border: #e3e6ee;
+  --input: #cdd2de;
+  --ring: #4357ae;
   --success: #0f7a55;
   --warning: #b45309;
-  --danger: #c0262d;
   --violet: #6d3fc0;
   --seal: #d9a441;
-  --seal-foreground: #1a2033;
+  --seal-foreground: #2b1e04;
 }
 
 .dark {
   --background: #0f1424;
-  --surface: #171d33;
-  --border: #2a3250;
   --foreground: #e6e9f2;
-  --muted: #9aa3b8;
+  --card: #171d33;
+  --card-foreground: #e6e9f2;
   --primary: #8c9bd8;
   --primary-foreground: #0f1424;
+  --secondary: #171d33;
+  --secondary-foreground: #e6e9f2;
+  --muted: #1f2640;
+  --muted-foreground: #9aa3b8;
+  --accent: #1c2553;
+  --accent-foreground: #d9dff3;
+  --destructive: #f2777c;
+  --destructive-foreground: #0f1424;
+  --border: #2a3250;
+  --input: #3a4366;
+  --ring: #8c9bd8;
   --success: #4cc38a;
   --warning: #f0a84a;
-  --danger: #f2777c;
   --violet: #b79cf0;
   --seal: #e2b95a;
   --seal-foreground: #0f1424;
@@ -66,18 +89,41 @@
 
 @theme inline {
   --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-surface: var(--card); /* alias historique */
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-danger: var(--destructive); /* alias historique */
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
-  --color-danger: var(--danger);
   --color-violet: var(--violet);
   --color-seal: var(--seal);
   --color-seal-foreground: var(--seal-foreground);
+}
+
+*,
+::before,
+::after {
+  border-color: var(--border);
+}
+
+/* Focus clavier toujours visible (WCAG 2.1 AA, ENF-11) */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 body {

@@ -1,9 +1,14 @@
 # EACT — socle Docker Compose (CT-09, ENF-15)
 #
 #   cp .env.example .env
-#   docker compose up -d --build              # socle applicatif
-#   docker compose --profile dev up -d        # + mailpit (faux SMTP)
+#   npm run infra                             # MODE LÉGER (dev, démo) : postgres + redis + mailpit ;
+#                                             #   api et web tournent sur le poste (npm run dev:api / dev:web)
+#   npm run infra:pdf                         # + gotenberg (génération du PDF/A à la signature)
+#   docker compose --profile dev up -d --build   # architecture complète conteneurisée (+ mailpit)
 #   docker compose --profile obs up -d        # + prometheus / grafana / loki / alloy
+#
+# Les adresses ci-dessous sont des NOMS DE SERVICE Docker (transparence de localisation, CDC §16.5) :
+# elles ne viennent pas du .env, qui décrit le poste du développeur (localhost).
 #
 # Zones réseau (ADR 0006) : seul `nginx` publie un port.
 
@@ -25,8 +30,11 @@ x-app-env: &app-env
   JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
   SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY}
   PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-  SMTP_HOST: ${SMTP_HOST:-mailpit}
-  SMTP_PORT: ${SMTP_PORT:-1025}
+  SMTP_HOST: mailpit
+  SMTP_PORT: 1025
+  MAIL_FROM: ${MAIL_FROM:-EACT MINESUP <ne-pas-repondre@eact.test>}
+  ANTIVIRUS: clamav
+  STOCKAGE: s3
   GITHUB_APP_ID: ${GITHUB_APP_ID:-}
   GITHUB_INSTALLATION_ID: ${GITHUB_INSTALLATION_ID:-}
   GITHUB_PRIVATE_KEY_PATH: /run/secrets/github_app_key
@@ -205,8 +213,9 @@ services:
     restart: "no"
 
   # ─────────────── Outils de dev (profil dev) ───────────────
+  # Faux serveur SMTP : capte TOUS les e-mails (réinitialisation, notifications) ; boîte web sur :8025.
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.27
     profiles: [dev]
     networks: [app]
 

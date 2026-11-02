@@ -28,24 +28,24 @@ export default async function VerifierPage({ params }: { params: Promise<{ code:
 
   return (
     <main className="mx-auto max-w-xl p-4 md:p-10">
-      <p className="text-sm text-muted">Ministère de l&apos;Enseignement Supérieur — Vérification d&apos;un acte</p>
+      <p className="text-sm text-muted-foreground">Ministère de l&apos;Enseignement Supérieur — Vérification d&apos;un acte</p>
       {acte ? (
         <div className="mt-4 rounded-card border-2 border-seal bg-surface p-6">
           <div className="flex items-center gap-2 text-success">
             <ShieldCheck aria-hidden /> <h1 className="text-xl font-semibold">Acte authentique</h1>
           </div>
           <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-            <dt className="text-muted">Référence</dt>
+            <dt className="text-muted-foreground">Référence</dt>
             <dd className="reference">{acte.reference}</dd>
-            <dt className="text-muted">Type</dt>
+            <dt className="text-muted-foreground">Type</dt>
             <dd>{acte.type}</dd>
-            <dt className="text-muted">Signé le</dt>
+            <dt className="text-muted-foreground">Signé le</dt>
             <dd>{new Date(acte.signeLe).toLocaleString('fr-CM', { timeZone: 'Africa/Douala' }) /* fuseau unique du Cameroun */}</dd>
-            <dt className="text-muted">Signataire</dt>
+            <dt className="text-muted-foreground">Signataire</dt>
             <dd>{acte.signataire}</dd>
-            <dt className="text-muted">Statut</dt>
+            <dt className="text-muted-foreground">Statut</dt>
             <dd>{acte.statut}</dd>
-            <dt className="text-muted">Empreinte SHA-256</dt>
+            <dt className="text-muted-foreground">Empreinte SHA-256</dt>
             <dd className="reference break-all text-xs">{acte.empreinteSha256}</dd>
           </dl>
         </div>
