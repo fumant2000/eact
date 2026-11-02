@@ -55,6 +55,16 @@ export class SignatureController {
     return this.signature.signer(id, u, dto.code, cle, req.ip ?? 'inconnue');
   }
 
+  /** R-06 : aperçu A4 du projet (filigrane « PROJET », sans numéro ni signature). */
+  @Get('actes/:id/apercu')
+  async apercu(@Param('id', Uuid) id: string, @UtilisateurCourant() u: UtilisateurConnecte, @Res() res: Response) {
+    await this.actes.detail(id, u);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="apercu-projet.pdf"');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(await this.signature.apercu(id));
+  }
+
   /** BF-32 : PDF/A signé. */
   @Get('actes/:id/pdf')
   async pdf(@Param('id', Uuid) id: string, @UtilisateurCourant() u: UtilisateurConnecte, @Res() res: Response) {

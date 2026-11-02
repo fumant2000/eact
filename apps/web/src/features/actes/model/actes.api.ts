@@ -99,6 +99,7 @@ export const actesApi = {
     appelApi<{ statut: string; etape: { ordre: number; libelle: string } }>(`/v1/actes/${id}/soumission`, { method: 'POST', json: { version } }),
   supprimer: (id: string) => appelApi<void>(`/v1/actes/${id}`, { method: 'DELETE' }),
   supprimerPiece: (id: string, pieceId: string) => appelApi<void>(`/v1/actes/${id}/pieces/${pieceId}`, { method: 'DELETE' }),
+  urlApercu: (id: string) => `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1/actes/${id}/apercu`,
   urlPiece: (id: string, pieceId: string) => `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1/actes/${id}/pieces/${pieceId}`,
 
   /** XMLHttpRequest plutôt que fetch : seul moyen d'afficher la progression de l'envoi (C5). */

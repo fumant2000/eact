@@ -8,7 +8,7 @@ import type { UtilisateurConnecte } from '../../common/security/securite';
 import { ConvertisseurPdf } from '../../infrastructure/pdf/convertisseur-pdf';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { Stockage } from '../../infrastructure/stockage/stockage';
-import { htmlActeSigne, PIED_DE_PAGE } from '../documents/gabarit-pdf';
+import { htmlActeSigne, htmlApercu, PIED_DE_PAGE } from '../documents/gabarit-pdf';
 import { AuthService } from '../m01-auth/auth.service';
 import { AuditService } from '../m10-audit/audit.service';
 
@@ -244,6 +244,31 @@ export class SignatureService {
       data: { cheminPdf: chemin, empreintePdf: createHash('sha256').update(fichier).digest('hex') },
     });
     return fichier;
+  }
+
+  /** R-06 : aperçu A4 d'un projet, tel qu'il sera imprimé, avant soumission ou signature. */
+  async apercu(acteId: string): Promise<Buffer> {
+    const a = await this.prisma.acte.findUniqueOrThrow({
+      where: { id: acteId },
+      include: { typeActe: true, structure: { include: { parent: true } }, destinataires: { orderBy: { ordre: 'asc' } } },
+    });
+    const html = htmlApercu({
+      codeType: a.typeActe.code,
+      objet: a.objet || '[objet à saisir]',
+      contenuHtml: a.contenu,
+      chaineStructures: [a.structure.parent?.code, a.structure.code].filter((c): c is string => !!c),
+      ampliations: a.destinataires.map((d) => d.libelle),
+      qualite: await this.qualitePrevue(a.typeActe.code),
+    });
+    return this.pdf.htmlVersPdfA(html, PIED_DE_PAGE, false);
+  }
+
+  private async qualitePrevue(codeType: string) {
+    const maintenant = new Date();
+    const d = await this.prisma.delegation.findFirst({
+      where: { type: TypeDelegation.SIGNATURE, actif: true, debut: { lte: maintenant }, fin: { gte: maintenant }, perimetre: { has: codeType } },
+    });
+    return d?.mention ?? 'LE MINISTRE';
   }
 
   /** Téléchargement : PDF stocké, ou régénéré s'il a échoué à la signature. */

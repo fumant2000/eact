@@ -218,6 +218,12 @@ export function useEditeurViewModel(id: string) {
         await client.invalidateQueries({ queryKey: ['mes-actes'] });
         router.push('/mes-actes?soumis=1');
       }),
+    /** R-06 : on enregistre d'abord, pour que l'aperçu montre la dernière saisie. */
+    ouvrirApercu: async () => {
+      const onglet = window.open('', '_blank'); // ouvert dans le clic, sinon bloqué comme fenêtre surgissante
+      await vider();
+      if (onglet) onglet.location.href = actesApi.urlApercu(id);
+    },
     demanderSuppression: () => setConfirmation('supprimer'),
     supprimer: () =>
       executer(async () => {

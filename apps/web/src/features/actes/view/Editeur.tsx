@@ -380,7 +380,7 @@ function EditeurCharge({ vm, acte, b }: { vm: VM; acte: Acte; b: Brouillon }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" disabled title={t('commun.bientot')}><History size={18} aria-hidden /> {t('editeur.versions')}</Button>
-          <Button variant="outline" disabled title={t('commun.bientot')}><Eye size={18} aria-hidden /> {t('editeur.apercuPdf')}</Button>
+          <Button variant="outline" onClick={() => void vm.ouvrirApercu()}><Eye size={18} aria-hidden /> {t('editeur.apercuPdf')}</Button>
           {!lecture && (
             <Button onClick={vm.preparerSoumission} disabled={vm.actionEnCours || vm.etat === 'conflit'}>
               <Send size={18} aria-hidden /> {acte.statut === 'A_CORRIGER' ? t('editeur.resoumettre') : t('editeur.soumettre')}

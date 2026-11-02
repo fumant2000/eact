@@ -8,11 +8,11 @@ import { Injectable } from '@nestjs/common';
 export class ConvertisseurPdf {
   private readonly url = process.env.GOTENBERG_URL ?? 'http://gotenberg:3000';
 
-  async htmlVersPdfA(html: string, piedDePage: string): Promise<Buffer> {
+  async htmlVersPdfA(html: string, piedDePage: string, pdfa = true): Promise<Buffer> {
     const form = new FormData();
     form.append('files', new Blob([html], { type: 'text/html' }), 'index.html');
     form.append('files', new Blob([piedDePage], { type: 'text/html' }), 'footer.html');
-    form.append('pdfa', 'PDF/A-2b');
+    if (pdfa) form.append('pdfa', 'PDF/A-2b'); // l'aperçu d'un projet n'a pas besoin d'être archivable
     form.append('paperWidth', '8.27'); // A4 en pouces
     form.append('paperHeight', '11.7');
     form.append('marginTop', '0.6');
