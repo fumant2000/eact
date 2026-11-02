@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DocumentsModule } from '../documents/documents.module';
 import { CircuitModule } from '../m05-circuit/circuit.module';
+import { GithubModule } from '../m14-github/github.module';
 import { AuditModule } from '../m10-audit/audit.module';
 import { ActesController } from './actes.controller';
 import { ActesService } from './actes.service';
@@ -11,7 +12,7 @@ import { ActesService } from './actes.service';
  * Interface fournie : IActes · Interfaces requises : IParapheur (circuit), IDocuments, IStockage, IAudit
  */
 @Module({
-  imports: [CircuitModule, DocumentsModule, AuditModule],
+  imports: [CircuitModule, DocumentsModule, AuditModule, GithubModule],
   controllers: [ActesController],
   providers: [ActesService],
   exports: [ActesService],

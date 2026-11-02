@@ -4,6 +4,9 @@
  * Idempotent : peut être relancé sans dupliquer les données.
  */
 import { createCipheriv, createHash, randomBytes } from 'node:crypto';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { lireGabarit } from '@eact/shared';
 import { Langue, ModePublicite, PrismaClient, Role, TypeDelegation } from '@prisma/client';
 import * as argon2 from 'argon2';
 
@@ -97,69 +100,26 @@ async function main() {
     });
   }
 
-  // Gabarits (cache de eact-gabarits, RG-23) : corps de l'acte seulement, en HTML ; l'en-tête officiel,
-  // le titre et le bloc de signature sont générés par EACT selon le type et la structure (BF-16).
-  const gabarits = [
-    {
-      typeActeId: ns.id,
-      libelle: 'Note de service · standard DAG',
-      description: 'Préambule libre, articles numérotés, ampliation interne.',
-      version: '2.3',
-      cheminGithub: 'fr/note-de-service.html',
-      ampliationsDefaut: ['SG', 'Toutes directions', 'Archives / Chrono'],
-      contenuCache:
-        "<p>Il est porté à la connaissance de l'ensemble du personnel que …</p>" +
-        '<p><strong>Article 1er.</strong> …</p>' +
-        '<p><strong>Article 2.</strong> Les responsables de structure veillent à la stricte application de la présente note de service.</p>',
-    },
-    {
-      typeActeId: ns.id,
-      libelle: 'Note de service · permanence et roulement',
-      description: 'Organisation d’une permanence ; tableau des agents en pièce jointe.',
-      version: '1.1',
-      cheminGithub: 'fr/note-de-service-permanence.html',
-      ampliationsDefaut: ['SG', 'DAG', 'SDACL', 'Intéressés', 'Archives / Chrono'],
-      contenuCache:
-        '<p>Il est porté à la connaissance du personnel qu’une permanence est organisée du … au …, selon le tableau joint.</p>' +
-        '<p><strong>Article 1er.</strong> Les agents désignés assurent la permanence aux heures ouvrables.</p>' +
-        '<p><strong>Article 2.</strong> Les chefs de service veillent à la stricte application de la présente note de service.</p>',
-    },
-    {
-      typeActeId: d.id,
-      libelle: 'Décision · affectation de personnel',
-      description: 'Visas réglementaires, dispositif en articles, notification à l’intéressé.',
-      version: '2.0',
-      cheminGithub: 'fr/decision-affectation.html',
-      ampliationsDefaut: ['Intéressé(e)', 'DAG', 'Service du Personnel', 'Archives / Chrono'],
-      contenuCache:
-        '<p><strong>LE MINISTRE DE L’ENSEIGNEMENT SUPÉRIEUR,</strong></p>' +
-        '<p>Vu la Constitution ;</p>' +
-        '<p>Vu le décret n° 2012/433 du 1er octobre 2012 portant organisation du Ministère de l’Enseignement Supérieur ;</p>' +
-        '<p><strong>DÉCIDE :</strong></p>' +
-        '<p><strong>Article 1er.</strong> Madame / Monsieur … est affecté(e) au Service du Personnel.</p>' +
-        '<p><strong>Article 2.</strong> La présente décision prend effet à compter de la date de prise de service de l’intéressé(e).</p>',
-    },
-    {
-      typeActeId: att.id,
-      libelle: 'Attestation · présence effective',
-      description: 'Constatation de présence au poste ; remise à l’agent demandeur.',
-      version: '1.0',
-      cheminGithub: 'fr/attestation-presence.html',
-      ampliationsDefaut: ['Intéressé(e)', 'Archives / Chrono'],
-      contenuCache:
-        '<p>Je soussigné, Secrétaire Général du Ministère de l’Enseignement Supérieur, atteste que Madame / Monsieur …, matricule …, est en service effectif au … depuis le ….</p>' +
-        '<p>En foi de quoi la présente attestation lui est délivrée pour servir et valoir ce que de droit.</p>',
-    },
-  ];
-  for (const { typeActeId, cheminGithub, ...g } of gabarits) {
-    // Le cache est rafraîchi à chaque seed (comme une synchronisation GitHub, BF-59).
-    await prisma.modeleActe.upsert({
-      where: { typeActeId_langue_cheminGithub: { typeActeId, langue: Langue.FR, cheminGithub } },
-      update: { ...g, commitSha: 'seed' },
-      create: { typeActeId, cheminGithub, ...g, langue: Langue.FR, commitSha: 'seed' },
-    });
+  // Gabarits : copie de référence du dépôt eact-gabarits (dossier gabarits/ à la racine), chargée dans le cache (RG-23).
+  // L'administrateur synchronise ensuite depuis GitHub (BF-59).
+  const dossier = join(__dirname, '..', '..', '..', 'gabarits');
+  for (const langue of [Langue.FR, Langue.EN]) {
+    const rep = join(dossier, langue.toLowerCase());
+    if (!existsSync(rep)) continue;
+    for (const fichier of readdirSync(rep).filter((f) => f.endsWith('.html'))) {
+      const g = lireGabarit(readFileSync(join(rep, fichier), 'utf8'));
+      const type = await prisma.typeActe.findUnique({ where: { code: g.type } });
+      if (!type) continue;
+      const cheminGithub = `${langue.toLowerCase()}/${fichier}`;
+      const donnees = { libelle: g.libelle, version: g.version, description: g.description, ampliationsDefaut: g.ampliations, contenuCache: g.corps, commitSha: 'seed' };
+      await prisma.modeleActe.upsert({
+        where: { typeActeId_langue_cheminGithub: { typeActeId: type.id, langue, cheminGithub } },
+        update: donnees,
+        create: { typeActeId: type.id, langue, cheminGithub, ...donnees },
+      });
+    }
   }
-  // Anciens gabarits du premier seed (en-tête dans le texte) : retirés s'ils ne servent à aucun acte.
+  // Anciens chemins (premiers seeds) : retirés s'ils ne servent à aucun acte.
   await prisma.modeleActe.deleteMany({ where: { cheminGithub: { endsWith: '.md' }, actes: { none: {} } } });
 
   if (process.env.NODE_ENV === 'production') return;

@@ -14,6 +14,7 @@ import type { UtilisateurConnecte } from '../../common/security/securite';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { Stockage } from '../../infrastructure/stockage/stockage';
 import { DocumentsService } from '../documents/documents.service';
+import { GabaritsService } from '../m14-github/gabarits.service';
 import { CircuitService } from '../m05-circuit/circuit.service';
 import { AuditService } from '../m10-audit/audit.service';
 import type { ModifierActeDto } from './actes.dto';
@@ -58,6 +59,7 @@ export class ActesService {
     private readonly audit: AuditService,
     private readonly stockage: Stockage,
     private readonly events: EventEmitter2,
+    private readonly gabarits: GabaritsService,
   ) {}
 
   // ─────────── Types et gabarits (UC-06 étapes 1-2) ───────────
@@ -85,8 +87,8 @@ export class ActesService {
   async modeles(typeActeId: string) {
     const modeles = await this.prisma.modeleActe.findMany({ where: { typeActeId }, orderBy: { libelle: 'asc' } });
     return {
-      // RG-23 : sans GitHub App configurée (ou injoignable), les gabarits viennent du cache.
-      source: process.env.GITHUB_APP_ID ? 'github' : 'cache',
+      // RG-23 : les gabarits viennent toujours du cache ; « github » si la dernière synchronisation a réussi.
+      source: this.gabarits.etatSynchronisation().source,
       synchroniseLe: modeles.reduce<Date | null>((d, m) => (!d || m.misAJourLe > d ? m.misAJourLe : d), null),
       modeles: modeles.map((m) => ({
         id: m.id,
