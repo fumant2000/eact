@@ -202,7 +202,7 @@ export function FicheActe({ id }: { id: string }) {
           </p>
         </div>
         {peutSigner && (
-          // Seul bouton or de l'application (ADR 0007)
+          // Seul bouton or de l'application
           <Button variant="seal" size="lg" onClick={sig.ouvrir}><Stamp size={18} aria-hidden /> {t('signature.signer')}</Button>
         )}
         {s.peutViser && (

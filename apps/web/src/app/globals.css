@@ -1,4 +1,4 @@
-/* Charte graphique EACT (docs/design-system.md, ADR 0007), contrastes WCAG 2.1 AA vérifiés. */
+/* Charte graphique EACT, contrastes WCAG 2.1 AA vérifiés. */
 @import "tailwindcss";
 
 /* Thème sombre piloté par la classe .dark (préférence utilisateur), sinon par le système. */

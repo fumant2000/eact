@@ -13,7 +13,7 @@ export interface EntreeAudit {
 }
 
 const HASH_ORIGINE = '0'.repeat(64);
-// pg_advisory_xact_lock : une seule insertion à la fois pour garder l'ordre de la chaîne (ADR 0004)
+// pg_advisory_xact_lock : une seule insertion à la fois pour garder l'ordre de la chaîne
 const VERROU_CHAINE = 4242;
 
 /** JSON canonique (clés triées à tous les niveaux) : jsonb réordonne les clés, le hash relu différerait sinon. */

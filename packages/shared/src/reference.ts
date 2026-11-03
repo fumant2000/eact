@@ -14,7 +14,7 @@ export function formaterReference(p: {
 export const CODES_TYPES_ACTES = ['DEC', 'AM', 'D', 'CIR', 'NS', 'C', 'ATT', 'AC'] as const;
 export type CodeTypeActe = (typeof CODES_TYPES_ACTES)[number];
 
-/** Décrets signés hors du ministère (Président ou Premier Ministre) : EACT transmet le projet puis enregistre le texte signé (ADR 0008). */
+/** Décrets signés hors du ministère (Président ou Premier Ministre) : EACT transmet le projet puis enregistre le texte signé. */
 export const TYPES_SIGNES_HORS_MINISTERE: readonly CodeTypeActe[] = ['DEC'];
 
 export enum NiveauConfidentialite {

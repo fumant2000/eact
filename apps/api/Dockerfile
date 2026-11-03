@@ -1,4 +1,4 @@
-# Image commune à api, worker et migrate (ADR 0001) ; contexte de build : racine du monorepo.
+# Image commune à api, worker et migrate ; contexte de build : racine du monorepo.
 FROM node:22-alpine AS build
 RUN apk add --no-cache openssl
 WORKDIR /repo

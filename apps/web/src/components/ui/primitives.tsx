@@ -10,7 +10,7 @@ const VARIANTES = {
   ghost: 'text-foreground hover:bg-accent',
   destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
   'outline-destructive': 'border border-destructive bg-card text-destructive hover:bg-destructive/10',
-  // Seul bouton or de l'application : « Signer » (ADR 0007)
+  // Seul bouton or de l'application : « Signer »
   seal: 'bg-seal-400 text-seal-foreground hover:brightness-95',
   link: 'text-primary underline underline-offset-4 hover:text-primary-800 px-0 h-auto',
 } as const;

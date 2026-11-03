@@ -143,7 +143,7 @@ function CarteType({ ty, structures, executer }: { ty: TypeAdmin; structures: { 
         </section>
       ))}
 
-      {/* Tout type peut recevoir un circuit, projet de décret compris (ADR 0008). */}
+      {/* Tout type peut recevoir un circuit, projet de décret compris. */}
       {sansCircuit.length > 0 && (
           <details className="rounded-md border border-dashed border-primary-300 p-4">
             <summary className="cursor-pointer text-sm font-medium text-primary">{t('admin.nouveauCircuit')}</summary>

@@ -22,7 +22,7 @@ function codeCourt(): string {
   return `${c.slice(0, 4)}-${c.slice(4)}`; // imprimé sous le QR
 }
 
-/** M06 ISignature — BF-29 à BF-33, RG-08 à RG-12 (UC-09, ADR 0003). */
+/** M06 ISignature — BF-29 à BF-33, RG-08 à RG-12 (UC-09). */
 @Injectable()
 export class SignatureService {
   private readonly logger = new Logger(SignatureService.name);
@@ -106,7 +106,7 @@ export class SignatureService {
     const acte = await this.prisma.acte.findUnique({ where: { id: acteId }, include: { typeActe: true } });
     if (!acte) throw new NotFoundException('Acte introuvable');
     if (acte.typeActe.signeHorsMinistere) {
-      throw new ConflictException({ code: 'SIGNE_HORS_MINISTERE', message: 'Un projet de décret est transmis à la Présidence, pas signé par le ministère (ADR 0008)' });
+      throw new ConflictException({ code: 'SIGNE_HORS_MINISTERE', message: 'Un projet de décret est transmis à la Présidence, pas signé par le ministère' });
     }
     if (!peutAppliquer('signer', acte.statut)) {
       throw new ConflictException({ code: 'TRANSITION_INTERDITE', message: acte.statut === StatutActe.SIGNE ? 'Cet acte est déjà signé' : "L'acte n'est pas prêt à signer" });
@@ -131,7 +131,7 @@ export class SignatureService {
         const [{ maintenant }] = await tx.$queryRaw<{ maintenant: Date }[]>`SELECT now() AS maintenant`;
         const annee = Number(new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Douala', year: 'numeric' }).format(maintenant));
 
-        // Séquenceur centralisé (ADR 0003, RG-08) : ligne créée au besoin puis verrouillée.
+        // Séquenceur centralisé (RG-08) : ligne créée au besoin puis verrouillée.
         await tx.$executeRaw`
           INSERT INTO compteur_numerotation (type_acte_id, structure_id, annee, dernier_numero)
           VALUES (${complet.typeActeId}::uuid, ${complet.structureId}::uuid, ${annee}, 0)

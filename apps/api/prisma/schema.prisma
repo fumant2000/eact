@@ -376,7 +376,7 @@ model Visa {
 
 // ───────────── M06 — Numérotation & idempotence ─────────────
 
-/// Séquenceur centralisé (ADR 0003) : ligne verrouillée par SELECT … FOR UPDATE.
+/// Séquenceur centralisé : ligne verrouillée par SELECT … FOR UPDATE.
 model CompteurNumerotation {
   typeActeId    String    @map("type_acte_id") @db.Uuid
   structureId   String    @map("structure_id") @db.Uuid
@@ -432,7 +432,7 @@ model TransmissionExterne {
 
 // ───────────── M10 — Journal d'audit chaîné ─────────────
 
-/// Ajout seul : trigger anti UPDATE/DELETE dans la migration init (ADR 0004).
+/// Ajout seul : trigger anti UPDATE/DELETE dans la migration init.
 model EvenementAudit {
   id            BigInt   @id @default(autoincrement())
   horodatage    DateTime @default(now())

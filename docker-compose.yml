@@ -4,7 +4,7 @@
 #   docker compose --profile obs up -d              # + prometheus / grafana / loki / alloy
 #   Mode léger (rechargement à chaud) : npm run infra, puis npm run dev:api / dev:web
 # Adresses = noms de service Docker, pas celles du .env (poste du développeur).
-# Zones réseau (ADR 0006) : seul nginx publie un port ; ports de dev dans docker-compose.override.yml.
+# Zones réseau : seul nginx publie un port ; ports de dev dans docker-compose.override.yml.
 
 name: eact
 
@@ -170,7 +170,7 @@ services:
     networks: [data]
     restart: unless-stopped
 
-  # Stockage objet S3 (ADR 0005) : RustFS, MinIO n'étant plus publié ; le code ne dépend que de IStockage.
+  # Stockage objet S3 : RustFS, MinIO n'étant plus publié ; le code ne dépend que de IStockage.
   s3:
     image: rustfs/rustfs:1.0.4
     environment:

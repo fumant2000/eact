@@ -10,5 +10,3 @@ infra/nginx/certs/
 .DS_Store
 .stockage/
 *.tsbuildinfo
-# généré par next dev
-apps/web/AGENTS.md
