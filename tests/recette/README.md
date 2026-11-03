@@ -17,7 +17,7 @@ node tests/recette/lancer.cjs m05 m06      # parapheur et signature seulement
 | `recette-m05.cjs` | Parapheur | 31 | qui vise quoi (RG-04), renvoi à une étape, correction, rejet, e-mails |
 | `recette-m06.cjs` | Signature et vérification | 26 | RG-11, RG-12, **TF-07** (20 signatures simultanées), **TF-08** (rejeu), **TF-10** (PDF modifié), PDF/A |
 | `recette-m02.cjs` | Délégations | 16 | délégation de signature, intérim d'un viseur, révocation, expiration |
-| `recette-m15.cjs` | Administration | 22 | ENF-08 (circuit créé sans code), comptes, rôles, structures |
+| `recette-m15.cjs` | Administration | 37 | ENF-08 (circuit créé sans code), désactivation d'un circuit ou d'un type (actes en cours menés au bout), comptes, rôles, structures |
 
 Variables : `EACT_API` (défaut `http://localhost:3000` : l’API directement, car nginx limite les connexions répétées), `EACT_MAILPIT` (défaut `http://localhost:8025/api/v1`).
 Les scripts M02 et M06 lisent et écrivent directement en base par `docker compose exec postgres` (test de

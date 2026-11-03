@@ -12,6 +12,15 @@ import { adminApi, CHAMPS, ROLES, type Etape, type Role, type TypeAdmin } from '
 
 const LIBELLES_CHAMPS: Record<string, CleTraduction> = { objet: 'aCompleter.objet', contenu: 'aCompleter.contenu', ampliation: 'aCompleter.ampliation' };
 
+function PastilleStatut({ actif }: { actif: boolean }) {
+  const { t } = useT();
+  return (
+    <span className={cx('rounded-full px-2 py-0.5 text-xs', actif ? 'bg-[#e3f4ec] text-[#0b6447]' : 'bg-muted text-muted-foreground')}>
+      {actif ? t('admin.actif') : t('admin.desactive')}
+    </span>
+  );
+}
+
 function SelectRole({ valeur, onChange, id }: { valeur: Role; onChange: (r: Role) => void; id?: string }) {
   const { t } = useT();
   return (
@@ -63,13 +72,18 @@ function CarteType({ ty, structures, executer }: { ty: TypeAdmin; structures: { 
   const [structureNouveau, setStructureNouveau] = useState('');
   const sansCircuit = structures.filter((s) => !ty.circuits.some((c) => c.structure.id === s.id));
   return (
-    <article className="space-y-4 rounded-lg border border-border bg-card p-5">
+    <article className={cx('space-y-4 rounded-lg border border-border bg-card p-5', !ty.actif && 'bg-muted/40')}>
       <header className="flex flex-wrap items-center gap-3">
         <CodeType code={ty.code} />
         <h2 className="text-lg font-semibold">{ty.libelle}</h2>
+        <PastilleStatut actif={ty.actif} />
         {ty.signeHorsMinistere && <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t('admin.horsMinistere')}</span>}
         <span className="ml-auto text-sm text-muted-foreground">{t('admin.actesCrees', { n: ty.nbActes })}</span>
+        <Button size="sm" variant={ty.actif ? 'outline-destructive' : 'outline'} onClick={() => executer(() => adminApi.modifierType(ty.id, { actif: !ty.actif }))}>
+          {ty.actif ? t('admin.desactiverType') : t('admin.reactiverType')}
+        </Button>
       </header>
+      {!ty.actif && <p className="text-sm text-muted-foreground">{t('admin.typeInactif')}</p>}
       <div className="grid gap-4 md:grid-cols-[1fr_200px]">
         <fieldset>
           <legend className="mb-1 text-sm font-medium">{t('admin.champsObligatoires')}</legend>
@@ -106,9 +120,17 @@ function CarteType({ ty, structures, executer }: { ty: TypeAdmin; structures: { 
       </div>
 
       {ty.circuits.length === 0 && <p className="text-sm text-warning">{t('admin.aucunCircuit')}</p>}
+      {ty.circuits.length > 0 && !ty.circuits.some((c) => c.actif) && <p className="text-sm text-warning">{t('admin.aucunCircuitActif')}</p>}
       {ty.circuits.map((c) => (
-        <section key={c.id} className="rounded-md border border-border p-4">
-          <h3 className="mb-2 text-sm font-semibold">{t('admin.circuitPour', { s: `${c.structure.chaine.join(' / ')} · ${c.structure.libelle}` })}</h3>
+        <section key={c.id} className={cx('rounded-md border border-border p-4', !c.actif && 'border-dashed bg-muted/40')}>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold">{t('admin.circuitPour', { s: `${c.structure.chaine.join(' / ')} · ${c.structure.libelle}` })}</h3>
+            <PastilleStatut actif={c.actif} />
+            <Button size="sm" variant={c.actif ? 'outline-destructive' : 'outline'} className="ml-auto" onClick={() => executer(() => adminApi.modifierCircuit(c.id, !c.actif))}>
+              {c.actif ? t('admin.desactiverCircuit') : t('admin.reactiverCircuit')}
+            </Button>
+          </div>
+          {!c.actif && <p className="mb-2 text-sm text-muted-foreground">{t('admin.circuitInactif')}</p>}
           <div className="hidden text-xs text-muted-foreground sm:grid sm:grid-cols-[32px_1fr_190px_90px_40px] sm:gap-2">
             <span /> <span>{t('admin.etape')}</span> <span>{t('admin.role')}</span> <span>{t('admin.delai')}</span> <span />
           </div>

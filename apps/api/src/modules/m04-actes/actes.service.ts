@@ -105,7 +105,8 @@ export class ActesService {
 
   async creer(u: UtilisateurConnecte, typeActeId: string, modeleId?: string) {
     const type = await this.prisma.typeActe.findUnique({ where: { id: typeActeId } });
-    if (!type?.actif) throw new NotFoundException("Type d'acte introuvable");
+    if (!type) throw new NotFoundException("Type d'acte introuvable");
+    if (!type.actif) throw new UnprocessableEntityException({ code: 'TYPE_INACTIF', message: "Ce type d'acte a été désactivé par l'administrateur" });
     const structure = await this.circuits.structureEmettriceParDefaut(typeActeId, u.structureId);
     if (!structure) {
       throw new UnprocessableEntityException({ code: 'CIRCUIT_ABSENT', message: "Aucun circuit n'est paramétré pour ce type dans votre structure" });
@@ -232,7 +233,11 @@ export class ActesService {
         ressourceId: acte.id,
       });
     }
-    const circuit = await this.circuits.circuit(acte.typeActeId, acte.structureId);
+    // Brouillon : circuit actif seulement ; acte déjà soumis : son circuit, même désactivé depuis.
+    const circuit =
+      acte.statut === StatutActe.BROUILLON
+        ? await this.circuits.circuit(acte.typeActeId, acte.structureId)
+        : await this.circuits.circuitDeLActe(acte.typeActeId, acte.structureId);
     const modifiable = this.estModifiable(acte, u);
     const lignee = await this.circuits.ascendants(acte.structureId);
     return {
@@ -343,6 +348,22 @@ export class ActesService {
   async soumettre(id: string, version: number, u: UtilisateurConnecte) {
     const acte = await this.acteModifiable(id, u);
     if (!peutAppliquer('soumettre', acte.statut)) throw new ConflictException({ code: 'TRANSITION_INTERDITE', message: `Soumission impossible depuis ${acte.statut}` });
+    // Un acte renvoyé en correction termine son circuit ; un nouveau projet exige un type et un circuit actifs.
+    const resoumission = acte.statut === StatutActe.A_CORRIGER;
+    if (!resoumission && !acte.typeActe.actif) {
+      throw new UnprocessableEntityException({ code: 'TYPE_INACTIF', message: "Ce type d'acte a été désactivé par l'administrateur" });
+    }
+    const circuit = resoumission
+      ? await this.circuits.circuitDeLActe(acte.typeActeId, acte.structureId)
+      : await this.circuits.circuit(acte.typeActeId, acte.structureId);
+    if (!circuit?.etapes.length) {
+      const desactive = !resoumission && (await this.circuits.circuitDeLActe(acte.typeActeId, acte.structureId));
+      throw new UnprocessableEntityException(
+        desactive
+          ? { code: 'CIRCUIT_INACTIF', message: "Le circuit de ce type a été désactivé par l'administrateur : soumission impossible" }
+          : { code: 'CIRCUIT_ABSENT', message: "Aucun circuit n'est paramétré pour ce type et cette structure" },
+      );
+    }
     const manquants = this.champsManquants(acte);
     if (manquants.length) {
       throw new UnprocessableEntityException({ code: 'CHAMPS_MANQUANTS', message: 'Champs obligatoires manquants', champs: manquants });
@@ -353,11 +374,6 @@ export class ActesService {
     if (acte.pieces.some((p) => p.statutAnalyse !== 'SAINE')) {
       throw new ConflictException({ code: 'PIECES_REFUSEES', message: 'Retirez les pièces refusées avant de soumettre' });
     }
-    const circuit = await this.circuits.circuit(acte.typeActeId, acte.structureId);
-    if (!circuit?.etapes.length) {
-      throw new UnprocessableEntityException({ code: 'CIRCUIT_ABSENT', message: "Aucun circuit n'est paramétré pour ce type et cette structure" });
-    }
-    const resoumission = acte.statut === StatutActe.A_CORRIGER;
     // Après correction, le circuit reprend à l'étape de retour choisie par le viseur (RG-06), sinon au début.
     const dernierRenvoi = resoumission
       ? await this.prisma.visa.findFirst({ where: { acteId: id, decision: 'CORRECTION' }, orderBy: { creeLe: 'desc' } })

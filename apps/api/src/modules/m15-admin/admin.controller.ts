@@ -41,6 +41,9 @@ class CircuitDto {
   @ApiProperty({ type: [EtapeDto] }) @IsArray() @ArrayMaxSize(15) @ValidateNested({ each: true }) @Type(() => EtapeDto) etapes!: EtapeDto[];
 }
 
+class ActivationDto {
+  @ApiProperty() @IsBoolean() actif!: boolean;
+}
 class TypeDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(3) @MaxLength(80) libelle?: string;
   @ApiPropertyOptional({ type: [String] }) @IsOptional() @IsArray() @IsString({ each: true }) champsObligatoires?: string[];
@@ -89,6 +92,12 @@ export class AdminController {
   @Post('circuits')
   creerCircuit(@Body() d: CircuitDto, @UtilisateurCourant() u: UtilisateurConnecte) {
     return this.admin.creerCircuit(u, d);
+  }
+
+  /** Désactivé : plus de nouveaux actes ; les actes déjà en circuit vont au bout. */
+  @Patch('circuits/:id')
+  modifierCircuit(@Param('id', Uuid) id: string, @Body() d: ActivationDto, @UtilisateurCourant() u: UtilisateurConnecte) {
+    return this.admin.modifierCircuit(u, id, d.actif);
   }
 
   @Post('circuits/:id/etapes')

@@ -52,6 +52,7 @@ export const adminApi = {
   types: () => appelApi<TypeAdmin[]>('/v1/admin/types'),
   modifierType: (id: string, d: Partial<Pick<TypeAdmin, 'libelle' | 'champsObligatoires' | 'dureeConservationAnnees' | 'actif'>>) => appelApi<void>(`/v1/admin/types/${id}`, json('PATCH', d)),
   creerCircuit: (d: { typeActeId: string; structureId: string; etapes: Omit<Etape, 'id' | 'ordre' | 'utilisee'>[] }) => appelApi<{ id: string }>('/v1/admin/circuits', json('POST', d)),
+  modifierCircuit: (id: string, actif: boolean) => appelApi<{ actif: boolean; actesEnCours: number }>(`/v1/admin/circuits/${id}`, json('PATCH', { actif })),
   ajouterEtape: (circuitId: string, e: Omit<Etape, 'id' | 'ordre' | 'utilisee'>) => appelApi<{ id: string }>(`/v1/admin/circuits/${circuitId}/etapes`, json('POST', e)),
   modifierEtape: (id: string, e: Partial<Omit<Etape, 'id' | 'ordre' | 'utilisee'>>) => appelApi<void>(`/v1/admin/etapes/${id}`, json('PATCH', e)),
   supprimerEtape: (id: string) => appelApi<void>(`/v1/admin/etapes/${id}`, { method: 'DELETE' }),

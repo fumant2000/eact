@@ -54,10 +54,18 @@ export class CircuitService {
     return lignee.map((s, i) => ({ id: s.id, code: s.code, libelle: s.libelle, chaine: lignee.slice(i).map((x) => x.code).reverse() }));
   }
 
-  /** Circuit actif du type pour la structure émettrice exactement. */
+  /** Circuit actif du type pour la structure émettrice exactement (nouveaux actes). */
   circuit(typeActeId: string, structureId: string) {
     return this.prisma.circuitValidation.findFirst({
       where: { typeActeId, structureId, actif: true },
+      include: { etapes: { orderBy: { ordre: 'asc' } } },
+    });
+  }
+
+  /** Circuit d'un acte déjà entré en circuit : suivi jusqu'au bout, même désactivé depuis par l'administrateur. */
+  circuitDeLActe(typeActeId: string, structureId: string) {
+    return this.prisma.circuitValidation.findUnique({
+      where: { typeActeId_structureId: { typeActeId, structureId } },
       include: { etapes: { orderBy: { ordre: 'asc' } } },
     });
   }
@@ -158,7 +166,7 @@ export class CircuitService {
     const acte = await this.chargerActe(acteId);
     if (!acte || acte.statut === StatutActe.BROUILLON) return false;
     if (await this.prisma.visa.count({ where: { acteId, viseurId: u.sub } })) return true;
-    const circuit = await this.circuit(acte.typeActeId, acte.structureId);
+    const circuit = await this.circuitDeLActe(acte.typeActeId, acte.structureId);
     for (const etape of circuit?.etapes ?? []) {
       if ((await this.viseursEligibles(acte, etape)).some((v) => v.id === u.sub)) return true;
     }
@@ -333,7 +341,7 @@ export class CircuitService {
         versions: { orderBy: { numero: 'asc' } },
       },
     });
-    const circuit = await this.circuit(acte.typeActeId, acte.structureId);
+    const circuit = await this.circuitDeLActe(acte.typeActeId, acte.structureId);
     const etapes = await Promise.all(
       (circuit?.etapes ?? []).map(async (e) => ({
         ordre: e.ordre,

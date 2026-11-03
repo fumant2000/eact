@@ -67,6 +67,40 @@ async function session(matricule) {
   const etapeNsUtilisee = ns.circuits[0].etapes.find((e) => e.utilisee);
   if (etapeNsUtilisee) verifier('étape déjà utilisée : suppression refusée', (await admin('DELETE', `/v1/admin/etapes/${etapeNsUtilisee.id}`)).body?.code === 'ETAPE_UTILISEE');
 
+  // Désactivation sans suppression : les nouveaux actes sont bloqués, ceux déjà en circuit vont au bout
+  const marie = await session('MINESUP-02845');
+  const creerAm = () => red('POST', '/v1/actes', { typeActeId: am.id });
+  const enCours = (await creerAm()).body.id;
+  let a = (await red('GET', `/v1/actes/${enCours}`)).body;
+  a = (await red('PATCH', `/v1/actes/${enCours}`, { version: a.version, objet: 'portant désactivation de test', contenu: '<p><strong>Article 1er.</strong> Test.</p>', ampliations: ['SG'] })).body;
+  r = await red('POST', `/v1/actes/${enCours}/soumission`, { version: a.version });
+  verifier('acte AM soumis avant la désactivation', r.status === 200 && r.body.etape?.ordre === 1);
+  const brouillon = (await creerAm()).body.id;
+
+  r = await admin('PATCH', `/v1/admin/circuits/${circuitAm.id}`, { actif: false });
+  verifier('circuit désactivé (acte en cours compté)', r.status === 200 && r.body.actif === false && r.body.actesEnCours >= 1, `${r.body?.actesEnCours} en cours`);
+  verifier('circuit désactivé : l’arrêté n’est plus rédigeable', (await red('GET', '/v1/types-actes')).body.find((t) => t.code === 'AM').nbEtapes === null);
+  verifier('circuit désactivé : nouvel acte refusé', (await creerAm()).body?.code === 'CIRCUIT_ABSENT');
+  a = (await red('GET', `/v1/actes/${brouillon}`)).body;
+  r = await red('POST', `/v1/actes/${brouillon}/soumission`, { version: a.version });
+  verifier('circuit désactivé : brouillon non soumissible', r.status === 422 && r.body.code === 'CIRCUIT_INACTIF');
+  const suivi = (await marie('GET', `/v1/actes/${enCours}/suivi`)).body;
+  verifier('acte en cours : frise du circuit conservée, visa possible', suivi?.etapes?.length === 4 && suivi.peutViser === true);
+  a = (await marie('GET', `/v1/actes/${enCours}`)).body;
+  r = await marie('POST', `/v1/actes/${enCours}/visas`, { decision: 'FAVORABLE', version: a.version });
+  verifier('acte en cours : il continue son circuit', r.status === 200 && r.body.etape?.ordre === 2, r.body?.etape?.libelle);
+  r = await admin('PATCH', `/v1/admin/circuits/${circuitAm.id}`, { actif: true });
+  verifier('circuit réactivé : l’arrêté redevient rédigeable', r.status === 200 && (await red('GET', '/v1/types-actes')).body.find((t) => t.code === 'AM').nbEtapes >= 4);
+
+  verifier('type désactivé', (await admin('PATCH', `/v1/admin/types/${am.id}`, { actif: false })).status === 204);
+  verifier('type désactivé : absent de « Nouvel acte »', !(await red('GET', '/v1/types-actes')).body.some((t) => t.code === 'AM'));
+  verifier('type désactivé : nouvel acte refusé', (await creerAm()).body?.code === 'TYPE_INACTIF');
+  a = (await red('GET', `/v1/actes/${brouillon}`)).body;
+  verifier('type désactivé : brouillon non soumissible', (await red('POST', `/v1/actes/${brouillon}/soumission`, { version: a.version })).body?.code === 'TYPE_INACTIF');
+  verifier('type désactivé : l’acte en cours reste consultable', (await red('GET', `/v1/actes/${enCours}/suivi`)).status === 200);
+  verifier('type réactivé', (await admin('PATCH', `/v1/admin/types/${am.id}`, { actif: true })).status === 204 && (await red('GET', '/v1/types-actes')).body.some((t) => t.code === 'AM'));
+  await red('DELETE', `/v1/actes/${brouillon}`);
+
   // BF-06
   r = await admin('POST', '/v1/admin/structures', { code: `T${suffixe}`, libelle: 'Structure de test', parentId: dag.id });
   verifier('BF-06 structure créée sous la DAG', r.status === 201);
@@ -92,6 +126,7 @@ async function session(matricule) {
   const aud = await session('MINESUP-07341');
   const actions = new Set((await aud('GET', '/v1/audit?limite=60')).body.map((e) => e.action));
   verifier('paramétrage et droits journalisés', actions.has('parametrage.circuit_cree') || actions.has('parametrage.etape_ajoutee'));
+  verifier('désactivation et réactivation du circuit journalisées', actions.has('parametrage.circuit_desactive') && actions.has('parametrage.circuit_reactive'));
   verifier('modification de droits journalisée (BF-48)', actions.has('utilisateur.droits_modifies'));
 
   console.log(`\n${ok} OK, ${ko} KO`);

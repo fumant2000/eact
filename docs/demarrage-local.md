@@ -121,7 +121,8 @@ Adresses : http://localhost:8080 en démo complète, http://localhost:3001 en mo
 
 13. **Paramétrage sans code (ENF-08)** : entrer comme Hervé TCHAMBA (administrateur) → Administration →
     Types et circuits → « Créer un circuit » pour l'arrêté ministériel (AM) à la DAG → se reconnecter en
-    rédactrice : l'arrêté est désormais proposé dans « Nouvel acte ».
+    rédactrice : l'arrêté est désormais proposé dans « Nouvel acte ». Inversement, « Désactiver le circuit » (ou
+    « Désactiver le type ») le retire des nouveaux actes sans rien supprimer : les actes déjà en circuit vont au bout.
 14. **Délégation (BF-09)** : entrer comme Roger ESSOMBA (Ministre) → Délégations → « Déclarer une délégation »
     → délégataire, période, types couverts → confirmer avec le code (affiché en mode démo). Le bandeau de
     délégation apparaît chez le délégataire, et les actes de ces types arrivent dans son « À signer ».

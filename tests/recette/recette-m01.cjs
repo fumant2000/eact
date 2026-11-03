@@ -1,6 +1,7 @@
-// Recette M01 de bout en bout contre l'API locale (http://localhost:3000) et Mailpit (http://localhost:8025).
+// Recette M01 de bout en bout contre l'API locale (http://localhost:3000) et Mailpit (EACT_MAILPIT, défaut http://localhost:8025).
 const { authenticator } = require(require.resolve('otplib', { paths: [require('node:path').join(__dirname, '..', '..', 'apps', 'api')] }));
 const API = process.env.EACT_API ?? 'http://localhost:3000';
+const MAILPIT = process.env.EACT_MAILPIT ?? 'http://localhost:8025/api/v1';
 const MDP = 'Minesup@2026';
 const SECRET = 'JBSWY3DPEHPK3PXP';
 let ok = 0, ko = 0;
@@ -96,14 +97,14 @@ function client() {
   } else console.log('-- enrôlement déjà fait (relancer db:reset pour le rejouer) :', r.body?.etape);
 
   // BF-05 réinitialisation via Mailpit
-  await fetch('http://localhost:8025/api/v1/messages', { method: 'DELETE' });
+  await fetch(`${MAILPIT}/messages`, { method: 'DELETE' });
   r = await client()('POST', '/v1/auth/mot-de-passe/oubli', { identifiant: 'a.njoya@minesup.test' });
   verifier('BF-05 demande → 202 + adresse masquée', r.status === 202, r.body?.destinataire);
   r = await client()('POST', '/v1/auth/mot-de-passe/oubli', { identifiant: 'personne@nulle.part' });
   verifier('BF-05 compte inconnu → même réponse', r.status === 202);
-  const liste = await (await fetch('http://localhost:8025/api/v1/messages')).json();
+  const liste = await (await fetch(`${MAILPIT}/messages`)).json();
   verifier('Mailpit a capté exactement 1 e-mail', liste.total === 1, liste.messages?.[0]?.To?.[0]?.Address);
-  const msg = await (await fetch(`http://localhost:8025/api/v1/message/${liste.messages[0].ID}`)).json();
+  const msg = await (await fetch(`${MAILPIT}/message/${liste.messages[0].ID}`)).json();
   const jeton = msg.Text.match(/jeton=([\w-]+)/)?.[1];
   r = await client()('POST', '/v1/auth/mot-de-passe/reinitialisation', { jeton, motDePasse: 'faible' });
   verifier('BF-05 politique de mot de passe appliquée', r.status === 400);

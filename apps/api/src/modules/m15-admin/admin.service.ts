@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma, Role, StatutActe } from '@prisma/client';
 import { EVENEMENTS } from '@eact/shared';
 import * as argon2 from 'argon2';
 import type { UtilisateurConnecte } from '../../common/security/securite';
@@ -89,10 +89,22 @@ export class AdminService {
       return { id: c.id };
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({ code: 'DOUBLON', message: 'Ce type a déjà un circuit pour cette structure' });
+        throw new ConflictException({ code: 'DOUBLON', message: 'Ce type a déjà un circuit pour cette structure (s’il est désactivé, réactivez-le)' });
       }
       throw e;
     }
+  }
+
+  /** Jamais supprimé (les visas y renvoient) : désactivé, il n'accepte plus de nouveaux actes ; ceux en cours vont au bout. */
+  async modifierCircuit(u: UtilisateurConnecte, id: string, actif: boolean) {
+    const c = await this.prisma.circuitValidation.findUnique({ where: { id } });
+    if (!c) throw new NotFoundException({ code: 'INTROUVABLE', message: 'Circuit introuvable' });
+    await this.prisma.circuitValidation.update({ where: { id }, data: { actif } });
+    const actesEnCours = await this.prisma.acte.count({
+      where: { typeActeId: c.typeActeId, structureId: c.structureId, statut: { in: [StatutActe.EN_CIRCUIT, StatutActe.A_CORRIGER] } },
+    });
+    this.journal(u, actif ? 'parametrage.circuit_reactive' : 'parametrage.circuit_desactive', 'circuit', id, { actesEnCours });
+    return { actif, actesEnCours };
   }
 
   async ajouterEtape(u: UtilisateurConnecte, circuitId: string, e: EtapeSaisie) {
